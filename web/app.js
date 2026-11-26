@@ -674,9 +674,9 @@ function renderMsgs() {
     const isStarred = starred.some(s => s.messageId === m.messageId);
     const rawPreview = (m.content || m.fileName || '').replace(/^\[QUOTE:[^\]]+\]\s*/, '').slice(0, 80);
     const moreId = 'more_' + idx;
-    const reactTrigger = m.messageId && !m.isRecalled ? `<div class="react-trigger-wrap">${reactHtml}
-      <div class="react-picker">${['👍','❤️','😆','😮','😢','😡'].map(e => `<button onclick="reactMsg('${m.messageId}','${e}')">${e}</button>`).join('')}${totalReacts > 0 ? `<button onclick="reactMsg('${m.messageId}','')" title="Bỏ cảm xúc" style="color:#64748B;font-size:15px;padding-left:6px">✕</button>` : ''}</div>
-      <button class="react-trigger-btn" onclick="reactMsg('${m.messageId}','${trigEmo}')" title="Thả cảm xúc">${trigEmo}</button>
+    const reactTrigger = m.messageId && !m.isRecalled ? `<div class="react-trigger-wrap"><span class="react-chip-slot">${reactHtml}</span>
+      <div class="react-picker">${['👍','❤️','😆','😮','😢','😡'].map(e => `<button onclick="reactMsg('${m.messageId}','${e}',event)">${e}</button>`).join('')}<button class="react-clear-btn" onclick="reactMsg('${m.messageId}','',event)" title="Bỏ cảm xúc" style="display:${totalReacts>0?'inline-block':'none'};color:#64748B;font-size:15px;padding-left:6px">✕</button></div>
+      <button class="react-trigger-btn" onclick="reactMsg('${m.messageId}',this.dataset.emo||'👍',event)" data-emo="${trigEmo}" title="Thả cảm xúc">${trigEmo}</button>
     </div>` : '';
     const sideActions = m.messageId && !m.isRecalled ? `<div class="msg-side-actions">
       <button class="msg-side-btn" title="Trả lời" onclick="setReply('${esc(m.displayName||m.username)}','${esc(rawPreview)}',${isMe})"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 7H6a4 4 0 0 0-4 4v3h5v5h5v-7a5 5 0 0 0-2-5zm12 0h-4a4 4 0 0 0-4 4v3h5v5h5v-7a5 5 0 0 0-2-5z"/></svg></button>
@@ -949,11 +949,45 @@ function cancelVoiceRecord() {
   }
 }
 
-async function reactMsg(msgId, emo) {
+function spawnReactBurst(ev, emo) {
+  if (!ev || !emo) return;
+  const r = ev.currentTarget ? ev.currentTarget.getBoundingClientRect() : { left: ev.clientX, top: ev.clientY, width: 0 };
+  for (let i = 0; i < 6; i++) {
+    const sp = document.createElement('span');
+    sp.className = 'react-burst';
+    sp.innerText = emo;
+    sp.style.left = (r.left + (r.width || 0) / 2 - 8) + 'px';
+    sp.style.top = (r.top - 6) + 'px';
+    sp.style.setProperty('--dx', ((Math.random() - 0.5) * 70).toFixed(0) + 'px');
+    sp.style.setProperty('--dy', (-28 - Math.random() * 44).toFixed(0) + 'px');
+    document.body.appendChild(sp);
+    setTimeout(() => sp.remove(), 660);
+  }
+}
+
+async function reactMsg(msgId, emo, ev) {
   if (!window._myLastReact) window._myLastReact = {};
-  if (emo) window._myLastReact[msgId] = emo; else delete window._myLastReact[msgId];
+  if (emo) { window._myLastReact[msgId] = emo; spawnReactBurst(ev, emo); }
+  else delete window._myLastReact[msgId];
   const d = await api('/api/react', 'POST', { messageId: msgId, emoji: emo }).then(r => r.json());
-  if (d.ok) { reactions[msgId] = d.reactions; renderMsgs(); }
+  if (!d.ok) return;
+  reactions[msgId] = d.reactions;
+  const row = document.querySelector(`[data-msg-id="${CSS.escape(msgId)}"]`);
+  if (!row) { renderMsgs(); return; }
+  const entries = Object.entries(d.reactions || {});
+  const total = entries.reduce((s, [, c]) => s + c, 0);
+  const slot = row.querySelector('.react-chip-slot');
+  if (slot) slot.innerHTML = total > 0 ? `<span class="react-chip">${entries.map(([e]) => e).join('')} ${total}</span>` : '';
+  const clr = row.querySelector('.react-clear-btn');
+  if (clr) clr.style.display = total > 0 ? 'inline-block' : 'none';
+  const trig = row.querySelector('.react-trigger-btn');
+  if (trig) {
+    const nextEmo = window._myLastReact[msgId] || (entries.length ? entries[entries.length - 1][0] : '👍');
+    trig.innerText = nextEmo;
+    trig.dataset.emo = nextEmo;
+  }
+  const msgEl = row.querySelector('.msg');
+  if (msgEl) msgEl.style.marginBottom = total > 0 ? '8px' : '';
 }
 async function recallMsg(msgId) {
   const payload = { type: 'recall_message', messageId: msgId };
