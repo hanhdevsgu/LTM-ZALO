@@ -24,18 +24,20 @@ public class SessionRegistry {
 
     public SessionRegistry(UserStore userStore) {
         this.userStore = userStore;
-        initLastSeenTable();
+        DatabaseManager.init();
+        loadLastSeenFromDb();
     }
 
-    private void initLastSeenTable() {
-        try (Connection c = DatabaseManager.getConnection(); Statement st = c.createStatement()) {
-            st.execute("CREATE TABLE IF NOT EXISTS user_last_seen (username TEXT PRIMARY KEY, last_seen INTEGER NOT NULL)");
-            try (ResultSet rs = st.executeQuery("SELECT username, last_seen FROM user_last_seen")) {
-                while (rs.next()) lastSeenMap.put(rs.getString(1).toLowerCase(), rs.getLong(2));
-            }
+    /** Nạp mốc thời gian hoạt động gần nhất từ SQLite khi khởi động Server */
+    private void loadLastSeenFromDb() {
+        try (Connection c = DatabaseManager.getConnection();
+             Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT username, last_seen FROM user_last_seen")) {
+            while (rs.next()) lastSeenMap.put(rs.getString(1).toLowerCase(), rs.getLong(2));
         } catch (SQLException ignored) {}
     }
 
+    /** Cập nhật thời điểm hoạt động gần nhất vào bộ nhớ và SQLite */
     private void saveLastSeen(String u, long ts) {
         lastSeenMap.put(u, ts);
         try (Connection c = DatabaseManager.getConnection();

@@ -138,6 +138,11 @@ public final class DatabaseManager {
                     + "username TEXT NOT NULL, "
                     + "created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
 
+            // 8. Thời điểm hoạt động gần nhất (Last Seen) của từng tài khoản
+            st.execute("CREATE TABLE IF NOT EXISTS user_last_seen ("
+                    + "username TEXT PRIMARY KEY, "
+                    + "last_seen INTEGER NOT NULL)");
+
             initialized = true;
             System.out.println("[Database] Đã khởi tạo đầy đủ Schema SQLite: " + DB_PATH);
         } catch (SQLException e) {
