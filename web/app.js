@@ -1520,31 +1520,6 @@ async function openSettingsModal() {
     </div>`);
 }
 
-async function openSystemModal() {
-  const st = await api('/api/status').then(r => r.json());
-  const db = st.dbStats || {};
-  showModal(`<div class="modal-head"><span>Trạng thái Hệ thống & Cơ sở dữ liệu</span><button onclick="closeModal()">✕</button></div>
-    <div class="post-item" style="background:#F8FAFC;line-height:1.75">
-      <div>🟢 <b>Trạng thái Server:</b> Đang hoạt động (${st.onlineCount} người online)</div>
-      <div>🗄️ <b>Database SQLite:</b> <code>${esc(st.dbPath || 'data/zalo.db')}</code> (${db.users || 0} tài khoản, ${db.groups || 0} nhóm, ${db.messages || 0} tin nhắn)</div>
-      <div>🔒 <b>TCP / TLS 1.3:</b> Cổng <code>${st.tlsPort}</code></div>
-      <div>📡 <b>UDP Discovery:</b> Cổng <code>${st.udpDiscoveryPort}</code></div>
-      <div>📢 <b>UDP Multicast:</b> Nhóm <code>${esc(st.multicastGroup)}</code></div>
-      <div>🌐 <b>HTTP / HTTPS:</b> Cổng <code>8080</code> / <code>${st.httpsPort}</code></div>
-      <div>📂 <b>FTP Server:</b> Cổng <code>${st.ftpPort}</code></div>
-    </div>
-    <label style="margin-top:14px">Phát thông báo toàn khoa (UDP Multicast → Nhóm Chung)</label>
-    <input id="announceIn" placeholder="Ví dụ: Lịch thi cuối kỳ môn Lập trình mạng...">
-    <button class="btn-primary" onclick="submitAnnounce()">📢 Phát thông báo ngay</button>`);
-}
-
-async function submitAnnounce() {
-  const txt = document.getElementById('announceIn').value.trim();
-  if (!txt) return;
-  await api('/api/announce', 'POST', txt);
-  closeModal();
-  await selectConv('chung', 'Nhóm Chung Toàn Khoa (SGU)', true);
-}
 function fmtSec(s) {
   if (!isFinite(s) || s < 0) return '0:00';
   const m = Math.floor(s / 60), sec = Math.floor(s % 60);
