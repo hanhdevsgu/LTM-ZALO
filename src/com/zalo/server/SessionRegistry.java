@@ -4,6 +4,7 @@ import com.zalo.model.ChatMessage;
 import com.zalo.model.MessageType;
 import com.zalo.model.UserInfo;
 
+import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -23,6 +24,26 @@ public class SessionRegistry {
 
     public SessionRegistry(UserStore userStore) {
         this.userStore = userStore;
+        initLastSeenTable();
+    }
+
+    private void initLastSeenTable() {
+        try (Connection c = DatabaseManager.getConnection(); Statement st = c.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS user_last_seen (username TEXT PRIMARY KEY, last_seen INTEGER NOT NULL)");
+            try (ResultSet rs = st.executeQuery("SELECT username, last_seen FROM user_last_seen")) {
+                while (rs.next()) lastSeenMap.put(rs.getString(1).toLowerCase(), rs.getLong(2));
+            }
+        } catch (SQLException ignored) {}
+    }
+
+    private void saveLastSeen(String u, long ts) {
+        lastSeenMap.put(u, ts);
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement("INSERT OR REPLACE INTO user_last_seen(username, last_seen) VALUES(?,?)")) {
+            ps.setString(1, u);
+            ps.setLong(2, ts);
+            ps.executeUpdate();
+        } catch (SQLException ignored) {}
     }
 
     public void registerInitialSession(ClientSession session) {
@@ -36,7 +57,7 @@ public class SessionRegistry {
         session.setDisplayName(displayName);
         session.setAuthenticated(true);
         onlineUsers.put(u, session);
-        lastSeenMap.put(u, System.currentTimeMillis());
+        saveLastSeen(u, System.currentTimeMillis());
         System.out.println("[Registry] Xác thực thành công: " + u + " (Client ID: " + session.getId() + ")");
         
         // Broadcast thông báo user đã online tới tất cả các client khác
@@ -49,7 +70,7 @@ public class SessionRegistry {
         String u = session.getUsername();
         if (u != null) {
             onlineUsers.remove(u.toLowerCase());
-            lastSeenMap.put(u.toLowerCase(), System.currentTimeMillis());
+            saveLastSeen(u.toLowerCase(), System.currentTimeMillis());
             System.out.println("[Registry] Client đã ngắt kết nối: " + u + " (Client ID: " + session.getId() + ")");
             // Broadcast user đã offline
             broadcastUserStatusChange(u, session.getDisplayName(), false);

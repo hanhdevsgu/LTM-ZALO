@@ -543,11 +543,15 @@ function openConvItemMenu(ev, id) {
   const rect = ev.currentTarget.getBoundingClientRect();
   const pinnedConvs = getConvPref('zalo_conv_pins');
   const isPinned = pinnedConvs.includes(id);
+  const gObj = groups.find(g => g.id === id);
+  const gOwner = gObj ? ((gObj.owner && gObj.owner !== 'system') ? gObj.owner : ((gObj.members && gObj.members[0]) || '')) : '';
+  const isGrpOwner = gObj && (gObj.owner === me || (gObj.owner === 'system' && me === gOwner));
   menu.style.left = Math.min(window.innerWidth - 200, rect.right - 20) + 'px';
   menu.style.top = (rect.bottom + 4) + 'px';
   menu.innerHTML = `
     <button onclick="togglePinConv('${esc(id)}')">${isPinned ? 'Bỏ ghim hội thoại' : 'Ghim hội thoại'}</button>
     <button onclick="hideConv('${esc(id)}')">Ẩn trò chuyện</button>
+    ${gObj && id !== 'chung' ? (isGrpOwner ? `<button style="color:#EF4444" onclick="document.getElementById('convItemMenu').style.display='none';curId='${esc(id)}';disbandGrp()">Giải tán nhóm</button>` : `<button style="color:#EF4444" onclick="document.getElementById('convItemMenu').style.display='none';curId='${esc(id)}';leaveGrp()">Rời nhóm</button>`) : ''}
     <div class="msg-more-div"></div>
     <button style="color:#EF4444" onclick="deleteConvHistory('${esc(id)}')">Xóa hội thoại</button>`;
   menu.style.display = 'block';
@@ -792,7 +796,7 @@ function renderContactsBody() {
   const titleEl = document.getElementById('cvTitle');
   const bodyEl = document.getElementById('cvBody');
   if (contactsTab === 'friends') {
-    const list = contacts.filter(u => u.username !== me && friends.includes(u.username));
+    const list = contacts.filter(u => u.username !== me && friends.some(f => f.toLowerCase() === u.username.toLowerCase()));
     titleEl.innerText = `Danh sách bạn bè (${list.length})`;
     bodyEl.innerHTML = list.length ? `<div class="cv-card">${list.map(u => {
       const shown = getAlias(u.username) || u.displayName || u.username;
@@ -1021,6 +1025,9 @@ async function openProfileModal(targetUser) {
   const cardSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M14 10h4"/><path d="M14 14h4"/><path d="M5 16c.5-1.5 1.8-2 3-2s2.5.5 3 2"/></svg>`;
   const blkSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
   const mutualCount = !isSelf ? groups.filter(g => (g.members || []).includes(targetUser) && (g.members || []).includes(me)).length : 0;
+  const curGrp = curIsGroup ? groups.find(g => g.id === curId) : null;
+  const curGrpOwner = curGrp ? ((curGrp.owner && curGrp.owner !== 'system') ? curGrp.owner : ((curGrp.members && curGrp.members[0]) || '')) : '';
+  const canKick = !isSelf && curGrp && ((curGrp.owner === me) || (curGrp.owner === 'system' && me === curGrpOwner)) && (curGrp.members || []).includes(targetUser);
   const hideInfo = !isSelf && !p.isFriend;
   const sharedImgs = !isSelf ? (history[targetUser] || []).filter(m => m.type === 'file_transfer' && !m.isRecalled && /\.(png|jpg|jpeg|gif|bmp|webp)$/i.test(m.fileName || '')).slice(-4) : [];
   const sharedImgHtml = sharedImgs.length
@@ -1060,7 +1067,8 @@ async function openProfileModal(targetUser) {
       <div class="prof-divider"></div>
       <div class="prof-action-row" style="cursor:default;color:${mutualCount?'var(--text)':'var(--muted)'}">${grpSvg} <span>Nhóm chung (${mutualCount})</span></div>
       <div class="prof-action-row" style="cursor:default;color:var(--muted)">${cardSvg} <span>Chia sẻ danh thiếp</span></div>
-      <button class="prof-action-row" onclick="toggleBlock('${esc(p.username)}',${!p.isBlockedByMe})">${blkSvg} <span>${p.isBlockedByMe ? 'Bỏ chặn tin nhắn và cuộc gọi' : 'Chặn tin nhắn và cuộc gọi'}</span></button>`}`);
+      <button class="prof-action-row" onclick="toggleBlock('${esc(p.username)}',${!p.isBlockedByMe})">${blkSvg} <span>${p.isBlockedByMe ? 'Bỏ chặn tin nhắn và cuộc gọi' : 'Chặn tin nhắn và cuộc gọi'}</span></button>
+      ${canKick ? `<button class="prof-action-row" style="color:#EF4444" onclick="closeModal();removeMember('${esc(p.username)}')">${blkSvg} <span>Xóa khỏi nhóm</span></button>` : ''}`}`);
 }
 
 function openEditProfileView() {
