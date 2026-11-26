@@ -201,7 +201,9 @@ input:focus, textarea:focus { border-color: var(--zalo); }
 .rd-header { height: 64px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; }
 .rd-body { flex: 1; overflow-y: auto; padding: 0; }
 .rd-profile { text-align: center; padding: 20px 16px 4px; }
-.rd-av { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 10px; font-size: 22px; }
+.rd-av { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 10px; font-size: 22px; position: relative; }
+.rd-av-cam { position: absolute; inset: 0; border-radius: 50%; background: rgba(0,0,0,.42); color: #fff; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s; }
+.rd-av:hover .rd-av-cam { opacity: 1; }
 .rd-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 14px 12px 18px; text-align: center; }
 .rd-qbtn { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11.5px; color: #334155; cursor: pointer; border: none; background: none; padding: 4px; }
 .rd-qicon { width: 38px; height: 38px; border-radius: 50%; background: #EAEDF0; color: #334155; display: flex; align-items: center; justify-content: center; }

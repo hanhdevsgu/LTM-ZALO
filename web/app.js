@@ -374,16 +374,24 @@ function renderRightDrawer() {
       </button></div>`;
   })() : '';
 
+  const rdAvUrl = curIsGroup ? (localStorage.getItem('zalo_grp_av_' + curId) || '') : ((!curIsGroup && curId !== 'my_cloud') ? ((contacts.find(x => x.username === curId) || {}).avatarUrl || '') : '');
+  const rdAvHtml = curId === 'my_cloud' ? '☁️' : (rdAvUrl ? `<img src="${esc(rdAvUrl)}">` : esc(curName.substring(0, 1).toUpperCase()));
+  const thirdBtn = curIsGroup
+    ? `<button class="rd-qbtn" onclick="openConvMenuModal()"><span class="rd-qicon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Quản lý</span></button>`
+    : (curId !== 'my_cloud' ? `<button class="rd-qbtn" onclick="openProfileModal('${esc(curId)}')"><span class="rd-qicon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span>Thông tin</span></button>` : '');
+
+  const camOv = curIsGroup ? `<span class="rd-av-cam"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>` : '';
+  const penGrp = curIsGroup ? `<button class="prof-edit-icon" style="width:24px;height:24px;vertical-align:middle;margin-left:4px" title="Đổi tên nhóm" onclick="openRenameGroupModal()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>` : '';
   document.getElementById('rdBody').innerHTML = `
     <div class="rd-profile">
-      <div class="av-circle rd-av" style="cursor:pointer;background:${curId==='my_cloud'?'#0068FF':avColor(curName)}" onclick="${!curIsGroup&&curId!=='my_cloud'?`openProfileModal('${esc(curId)}')`:''}">${curId==='my_cloud'?'☁️':esc(curName.substring(0,1).toUpperCase())}</div>
-      <b style="font-size:15px">${esc(curName)}</b>
+      <div class="av-circle rd-av" title="${curIsGroup?'Đổi ảnh đại diện nhóm':''}" style="cursor:pointer;background:${curId==='my_cloud'?'#0068FF':avColor(curName)}" onclick="${curIsGroup?`document.getElementById('grpDrawerAvIn').click()`:(curId!=='my_cloud'?`openProfileModal('${esc(curId)}')`:'')}">${rdAvHtml}${camOv}</div>
+      ${curIsGroup ? `<input id="grpDrawerAvIn" type="file" accept="image/*" hidden onchange="uploadCurGroupAvatar(this)">` : ''}
+      <div style="display:flex;align-items:center;justify-content:center;gap:4px"><b style="font-size:15.5px;font-weight:600">${esc(curName)}</b>${penGrp}</div>
     </div>
-    <div class="rd-quick">
+    <div class="rd-quick" style="grid-template-columns:repeat(${thirdBtn?3:2},1fr)">
       <button class="rd-qbtn" onclick="toggleMute(${!muted})"><span class="rd-qicon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span><span>${muted ? 'Bật TB' : 'Tắt thông báo'}</span></button>
       <button class="rd-qbtn" onclick="openStarredModal()"><span class="rd-qicon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span><span>Đã lưu (${starred.length})</span></button>
-      <button class="rd-qbtn" onclick="openConvMenuModal()"><span class="rd-qicon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Quản lý</span></button>
-      <button class="rd-qbtn" onclick="${curIsGroup?'openConvMenuModal()':(curId!=='my_cloud'?`openProfileModal('${esc(curId)}')`:'') }"><span class="rd-qicon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span>Thông tin</span></button>
+      ${thirdBtn}
     </div>
     ${memSec}
     <div class="rd-section"><div class="rd-sec-title">Ảnh/Video</div><div class="rd-media-grid">${imgsHtml}</div>${imgs.length > 0 ? `<button class="rd-see-all" onclick="openStorageDrawer('img')">Xem tất cả</button>` : ''}</div>
@@ -391,7 +399,7 @@ function renderRightDrawer() {
     <div class="rd-section"><div class="rd-sec-title">Link</div>${linksHtml}${links.length > 0 ? `<button class="rd-see-all" onclick="openStorageDrawer('link')">Xem tất cả</button>` : ''}</div>
     <div class="rd-section"><div class="rd-sec-title">Thiết lập bảo mật</div>
       <button class="rd-danger-row" onclick="clearChat()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg> Xoá lịch sử trò chuyện</button>
-      ${curIsGroup && curId !== 'chung' ? `<button class="rd-danger-row" onclick="leaveGrp()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Rời nhóm</button>` : ''}
+      ${curIsGroup ? `<button class="rd-danger-row" onclick="leaveGrp()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Rời nhóm</button>` : ''}
     </div>`;
 }
 
@@ -1347,13 +1355,56 @@ async function submitCreateGroup() {
   }
 }
 
+async function uploadCurGroupAvatar(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const up = await fetch('/api/upload?folder=avatars&name=' + encodeURIComponent(f.name), { method: 'POST', headers: { 'X-Zalo-Token': token }, body: f }).then(r => r.json());
+  if (up.ok) {
+    localStorage.setItem('zalo_grp_av_' + curId, up.url);
+    renderHeaderAndDrawer();
+    renderConvList();
+  }
+}
+
+function openRenameGroupModal() {
+  showModal(`<div class="modal-head"><span>Đổi tên nhóm</span><button onclick="closeModal()">✕</button></div>
+    <input id="renameGrpIn" value="${esc(curName)}" placeholder="Nhập tên nhóm mới...">
+    <div class="modal-footer-btns">
+      <button class="btn-sec" style="width:auto;margin:0;padding:9px 18px" onclick="closeModal()">Hủy</button>
+      <button class="btn-primary" style="width:auto;margin:0;padding:9px 20px" onclick="saveGroupName()">Xác nhận</button>
+    </div>`);
+  setTimeout(() => { const el = document.getElementById('renameGrpIn'); if (el) { el.focus(); el.select(); } }, 20);
+}
+
+function saveGroupName() {
+  const name = (document.getElementById('renameGrpIn')?.value || '').trim();
+  if (!name) return;
+  curName = name;
+  const g = groups.find(x => x.id === curId);
+  if (g) g.name = name;
+  localStorage.setItem('zalo_grp_name_' + curId, name);
+  closeModal();
+  renderHeaderAndDrawer();
+  renderConvList();
+}
+
 async function openConvMenuModal() {
   const muted = !!(convStates[curId] || {}).muted;
   if (curIsGroup) {
     const g = groups.find(x => x.id === curId) || { members: [], owner: 'system' };
-    const isOwner = g.owner === me;
-    const memHtml = (g.members || []).map(m => `<div style="font-size:13px;padding:3px 0">• ${esc(m)} ${m === g.owner ? '<b>(Trưởng nhóm)</b>' : ''} ${isOwner && m !== me && curId !== 'chung' ? `<button onclick="transferOwner('${m}')">Chuyển quyền</button>` : ''}</div>`).join('');
-    showModal(`<div class="modal-head"><span>Tùy chọn nhóm</span><button onclick="closeModal()">✕</button></div><b>Thành viên (${(g.members || []).length})</b>${memHtml}${isOwner && curId !== 'chung' ? `<label>Thêm thành viên</label><div style="display:flex;gap:6px"><input id="addMemIn"><button onclick="addMem()">Thêm</button></div>` : ''}<button class="btn-sec" onclick="toggleMute(${!muted})">${muted ? 'Bật thông báo' : 'Tắt thông báo'}</button><button class="btn-sec" onclick="clearChat()">Xóa đoạn chat phía tôi</button>${curId !== 'chung' ? `<button class="btn-danger" onclick="leaveGrp()">Rời nhóm</button>` : ''}${isOwner && curId !== 'chung' ? `<button class="btn-danger" onclick="disbandGrp()">Giải tán nhóm</button>` : ''}`);
+    const ownerUser = (g.owner && g.owner !== 'system') ? g.owner : ((g.members && g.members[0]) || '');
+    const isOwner = (g.owner === me) || (g.owner === 'system' && me === ownerUser);
+    const nonMembers = contacts.filter(u => !(g.members || []).includes(u.username));
+    const addSelect = nonMembers.length
+      ? `<label>Thêm thành viên</label><div style="display:flex;gap:8px"><select id="addMemIn" style="flex:1;padding:9px;border:1px solid #D1D5DB;border-radius:6px">${nonMembers.map(u => `<option value="${esc(u.username)}">${esc(u.displayName)}</option>`).join('')}</select><button class="btn-primary" style="width:auto;margin:0;padding:8px 16px" onclick="addMem()">Thêm</button></div>`
+      : '';
+    showModal(`<div class="modal-head"><span>Quản lý nhóm</span><button onclick="closeModal()">✕</button></div>
+      <button class="btn-sec" style="margin-top:0" onclick="closeModal();document.getElementById('grpDrawerAvIn').click()">Đổi ảnh đại diện nhóm</button>
+      <button class="btn-sec" onclick="closeModal();openMembersDrawer()">Xem thành viên (${(g.members || []).length})</button>
+      ${isOwner ? addSelect : ''}
+      <button class="btn-sec" onclick="toggleMute(${!muted})">${muted ? 'Bật thông báo' : 'Tắt thông báo'}</button>
+      <button class="btn-sec" onclick="clearChat()">Xóa lịch sử trò chuyện</button>
+      <button class="btn-danger" onclick="leaveGrp()">Rời nhóm</button>
+      ${isOwner ? `<button class="btn-danger" onclick="disbandGrp()">Giải tán nhóm</button>` : ''}`);
   } else if (curId !== 'my_cloud') {
     const p = await api('/api/profile?user=' + encodeURIComponent(curId)).then(r => r.json());
     showModal(`<div class="modal-head"><span>Tùy chọn hội thoại</span><button onclick="closeModal()">✕</button></div><button class="btn-primary" onclick="openProfileModal('${esc(curId)}')">Xem trang cá nhân</button><button class="btn-sec" onclick="toggleMute(${!muted})">${muted ? 'Bật thông báo' : 'Tắt thông báo'}</button>${p.isFriend ? `<button class="btn-sec" onclick="unfriend('${esc(curId)}')">Hủy kết bạn</button>` : `<button class="btn-sec" onclick="sendReq('${esc(curId)}')">Kết bạn</button>`}<button class="btn-danger" onclick="toggleBlock('${esc(curId)}',${!p.isBlockedByMe})">${p.isBlockedByMe ? 'Gỡ chặn' : 'Chặn người này'}</button><button class="btn-danger" onclick="clearChat()">Xóa đoạn chat phía tôi</button>`);
