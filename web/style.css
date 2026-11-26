@@ -193,10 +193,12 @@ input:focus, textarea:focus { border-color: var(--zalo); }
 .sp-tabs button { flex: 1; padding: 11px; border: none; background: #fff; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
 .sp-tabs button.active { color: var(--zalo); border-bottom-color: var(--zalo); }
 .sp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 10px 10px; max-height: 250px; overflow-y: auto; overflow-x: hidden; }
-.sp-grid.stickers { grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; }
+.sp-grid.stickers { grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px 12px 12px; }
 .sp-emo { border: none; background: transparent; font-size: 22px; cursor: pointer; padding: 5px 2px; border-radius: 6px; line-height: 1; }
 .sp-emo:hover { background: #F1F5F9; }
-.sp-stk { border: none; border-radius: 8px; padding: 12px 6px; font-weight: 700; font-size: 13px; cursor: pointer; }
+.sp-stk { border: none; background: transparent; border-radius: 8px; padding: 4px; height: 72px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .12s, background .12s; }
+.sp-stk:hover { background: #F1F5F9; transform: scale(1.06); }
+.sp-stk svg { width: 60px; height: 60px; }
 
 /* Ngăn kéo phải (Right Drawer) chuẩn Zalo PC */
 .right-drawer { width: 340px; background: #fff; border-left: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }

@@ -521,7 +521,7 @@ function renderConvList() {
     const isPinned = pinnedConvs.includes(it.id);
     const arr = history[it.id] || [];
     const last = arr[arr.length - 1];
-    const prev = last ? (last.isRecalled ? 'Tin nhắn đã được thu hồi' : (last.fileName ? '📎 ' + last.fileName : (last.content === '[FRIEND_OK]' ? 'Các bạn đã trở thành bạn bè' : (last.content || '').replace(/^\[QUOTE:[^\]]+\]\s*/, '')))) : it.defSub;
+    const prev = last ? (last.isRecalled ? 'Tin nhắn đã được thu hồi' : (last.fileName ? '📎 ' + last.fileName : (last.content === '[FRIEND_OK]' ? 'Các bạn đã trở thành bạn bè' : (/^\[STICKER:/.test(last.content || '') ? '[Sticker]' : (last.content || '').replace(/^\[QUOTE:[^\]]+\]\s*/, ''))))) : it.defSub;
     const time = last ? (last.timestamp || '') : '';
     const uObj = !it.isGrp && it.id !== 'my_cloud' ? contacts.find(x => x.username === it.id) : null;
     const grpAv = it.isGrp ? (localStorage.getItem('zalo_grp_av_' + it.id) || '') : '';
@@ -637,10 +637,15 @@ function renderMsgs() {
     const fileUrl = m.fileData && m.fileData.startsWith('/api/files/') ? m.fileData : (m.fileData ? `data:application/octet-stream;base64,${m.fileData}` : '');
     const fn = (m.fileName || '').toLowerCase();
     const isImg = m.type === 'file_transfer' && !m.isRecalled && /\.(png|jpg|jpeg|gif|bmp|webp)$/.test(fn);
+    const stkMatch = !m.isRecalled && (m.content || '').match(/^\[STICKER:([a-z0-9_]+)\]$/);
+    const isSticker = !!stkMatch;
 
     let content = '';
     if (m.isRecalled) content = `<i style="color:var(--muted)">${esc(m.content || 'Tin nhắn đã được thu hồi')}</i>`;
-    else if (m.type === 'file_transfer' && fileUrl) {
+    else if (isSticker) {
+      const stk = STICKERS.find(s => s.id === stkMatch[1]) || STICKERS[0];
+      content = `<div style="width:104px;height:104px">${stk.svg}</div>`;
+    } else if (m.type === 'file_transfer' && fileUrl) {
       if (isImg) content = `<img class="preview" src="${fileUrl}" onclick="openImageViewer('${fileUrl}','${esc(m.fileName)}')">`;
       else if (/\.(mp4|webm|mov)$/.test(fn) && !fn.startsWith('voice_')) content = `<video controls src="${fileUrl}"></video><a download="${esc(m.fileName)}" href="${fileUrl}" style="font-size:12.5px;color:var(--zalo);text-decoration:none">Tải xuống ${esc(m.fileName)}</a>`;
       else if (/\.(mp3|wav|m4a|ogg)$/.test(fn) || fn.startsWith('voice_')) {
@@ -695,13 +700,13 @@ function renderMsgs() {
 
     const sObj = !isMe ? contacts.find(x => x.username === m.username) : null;
     const avHtml = !isMe ? (isSamePrev ? '<div class="msg-av-spacer"></div>' : `<div class="msg-av" style="background:${avColor(m.displayName||m.username)}" onclick="openProfileModal('${esc(m.username)}')">${sObj && sObj.avatarUrl ? `<img src="${esc(sObj.avatarUrl)}">` : esc((m.displayName||m.username).substring(0,1).toUpperCase())}</div>`) : '';
-    const showMeta = !isImg;
+    const showMeta = !isImg && !isSticker;
     const isLastMine = isMe && idx === arr.length - 1;
     return `<div class="msg-row ${isMe ? 'me' : ''} ${isSamePrev ? 'grouped' : ''}" data-msg-id="${esc(m.messageId || '')}"><div class="msg-col" style="gap:0">
       <div style="display:flex;align-items:flex-end;gap:8px;${isMe?'flex-direction:row-reverse':''}">
         ${avHtml}
         <div class="msg-wrap">
-          <div class="msg ${isMe ? 'me' : ''} ${isImg ? 'img-only' : ''}" style="${reactHtml?'margin-bottom:8px':''}">${content}${showMeta ? `<div class="msg-meta"><span>${m.timestamp || ''}</span>${isStarred ? '<span>⭐</span>' : ''}</div>` : ''}${reactTrigger}</div>
+          <div class="msg ${isMe ? 'me' : ''} ${(isImg||isSticker) ? 'img-only' : ''}" style="${reactHtml?'margin-bottom:8px':''}">${content}${showMeta ? `<div class="msg-meta"><span>${m.timestamp || ''}</span>${isStarred ? '<span>⭐</span>' : ''}</div>` : ''}${reactTrigger}</div>
           ${sideActions}
         </div>
       </div>
@@ -739,6 +744,21 @@ function switchStickerTab(tab) {
   document.getElementById('spTabEmoji').classList.toggle('active', tab === 'emoji');
   renderStickerGrid();
 }
+const STICKERS = [
+  { id: 'hi', kw: 'hi chao hello tho', svg: `<svg viewBox="0 0 100 100"><ellipse cx="36" cy="22" rx="8" ry="18" fill="#FFF" stroke="#334155" stroke-width="2.5"/><ellipse cx="64" cy="22" rx="8" ry="18" fill="#FFF" stroke="#334155" stroke-width="2.5"/><circle cx="50" cy="54" r="28" fill="#FFF" stroke="#334155" stroke-width="2.5"/><circle cx="40" cy="50" r="3.5" fill="#1E293B"/><circle cx="60" cy="50" r="3.5" fill="#1E293B"/><circle cx="33" cy="58" r="5" fill="#FDA4AF"/><circle cx="67" cy="58" r="5" fill="#FDA4AF"/><path d="M44 60q6 6 12 0" fill="none" stroke="#334155" stroke-width="2.5" stroke-linecap="round"/><text x="12" y="26" font-size="16" font-weight="800" fill="#F59E0B">HI!</text></svg>` },
+  { id: 'haha', kw: 'haha cuoi lol', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="34" fill="#FEF08A" stroke="#334155" stroke-width="2.5"/><path d="M32 42l8 4-8 4M68 42l-8 4 8 4" fill="none" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/><path d="M32 58h36a18 18 0 0 1-36 0z" fill="#FFF" stroke="#334155" stroke-width="2.5"/><path d="M38 64h24" stroke="#CBD5E1" stroke-width="2"/></svg>` },
+  { id: 'love', kw: 'yeu tim heart love', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="30" fill="#FCE7F3" stroke="#334155" stroke-width="2.5"/><path d="M34 46c0-5 7-5 7 0 0-5 7-5 7 0 0 6-7 10-7 10s-7-4-7-10zM54 46c0-5 7-5 7 0 0-5 7-5 7 0 0 6-7 10-7 10s-7-4-7-10z" fill="#F43F5E"/><path d="M42 66q8 7 16 0" fill="none" stroke="#334155" stroke-width="2.5" stroke-linecap="round"/><path d="M76 22c0-4 6-4 6 0 0-4 6-4 6 0 0 5-6 9-6 9s-6-4-6-9z" fill="#FB7185"/></svg>` },
+  { id: 'ok', kw: 'ok like tot', svg: `<svg viewBox="0 0 100 100"><circle cx="46" cy="54" r="28" fill="#E0F2FE" stroke="#334155" stroke-width="2.5"/><circle cx="38" cy="48" r="3.5" fill="#1E293B"/><circle cx="54" cy="48" r="3.5" fill="#1E293B"/><path d="M39 60q7 6 14 0" fill="none" stroke="#334155" stroke-width="2.5" stroke-linecap="round"/><rect x="66" y="44" width="16" height="22" rx="6" fill="#FDE047" stroke="#334155" stroke-width="2.5"/><path d="M72 44v-10a4 4 0 0 1 8 0v10" fill="#FDE047" stroke="#334155" stroke-width="2.5"/><path d="M78 20l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#F59E0B"/></svg>` },
+  { id: 'cry', kw: 'khoc huhu buon cry', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="32" fill="#E0E7FF" stroke="#334155" stroke-width="2.5"/><path d="M34 45q4-4 8 0M58 45q4-4 8 0" fill="none" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/><rect x="35" y="48" width="6" height="24" rx="3" fill="#38BDF8"/><rect x="59" y="48" width="6" height="24" rx="3" fill="#38BDF8"/><ellipse cx="50" cy="64" rx="9" ry="7" fill="#FB7185" stroke="#334155" stroke-width="2.5"/></svg>` },
+  { id: 'shy', kw: 'ngai ngung shy', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="32" fill="#F1F5F9" stroke="#334155" stroke-width="2.5"/><circle cx="34" cy="56" r="6" fill="#FDA4AF"/><circle cx="66" cy="56" r="6" fill="#FDA4AF"/><path d="M35 46l8 3M65 46l-8 3" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/><circle cx="44" cy="62" r="5" fill="#CBD5E1" stroke="#334155" stroke-width="2"/><circle cx="56" cy="62" r="5" fill="#CBD5E1" stroke="#334155" stroke-width="2"/></svg>` },
+  { id: 'angry', kw: 'gian tuc angry', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="32" fill="#FECACA" stroke="#334155" stroke-width="2.5"/><path d="M32 42l12 6M68 42l-12 6" stroke="#1E293B" stroke-width="3.5" stroke-linecap="round"/><circle cx="38" cy="52" r="3.5" fill="#1E293B"/><circle cx="62" cy="52" r="3.5" fill="#1E293B"/><path d="M38 68q12-8 24 0" fill="none" stroke="#334155" stroke-width="3" stroke-linecap="round"/><path d="M72 22l4 6-6 4 6 4-4 6" fill="none" stroke="#EF4444" stroke-width="2.5"/></svg>` },
+  { id: 'wow', kw: 'wow ngac nhien', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="32" fill="#FFEDD5" stroke="#334155" stroke-width="2.5"/><circle cx="38" cy="46" r="6" fill="#FFF" stroke="#334155" stroke-width="2.5"/><circle cx="62" cy="46" r="6" fill="#FFF" stroke="#334155" stroke-width="2.5"/><circle cx="38" cy="46" r="2.5" fill="#1E293B"/><circle cx="62" cy="46" r="2.5" fill="#1E293B"/><ellipse cx="50" cy="66" rx="7" ry="10" fill="#FB7185" stroke="#334155" stroke-width="2.5"/></svg>` },
+  { id: 'sleep', kw: 'ngu buon ngu sleep', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="30" fill="#DBEAFE" stroke="#334155" stroke-width="2.5"/><path d="M34 50q5 4 10 0M56 50q5 4 10 0" fill="none" stroke="#334155" stroke-width="2.5" stroke-linecap="round"/><circle cx="50" cy="64" r="4" fill="#93C5FD" stroke="#334155" stroke-width="2"/><text x="68" y="26" font-size="14" font-weight="700" fill="#3B82F6">Zzz</text></svg>` },
+  { id: 'hug', kw: 'om thuong hug', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="32" fill="#FEF3C7" stroke="#334155" stroke-width="2.5"/><circle cx="39" cy="46" r="3.5" fill="#1E293B"/><circle cx="61" cy="46" r="3.5" fill="#1E293B"/><path d="M40 62c0-6 10-6 10 0 0-6 10-6 10 0 0 8-10 14-10 14s-10-6-10-14z" fill="#F43F5E" stroke="#334155" stroke-width="2"/></svg>` },
+  { id: 'sparkle', kw: 'dinh tuyet voi sparkle', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="30" fill="#DCFCE7" stroke="#334155" stroke-width="2.5"/><path d="M36 46l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1zM64 46l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z" fill="#F59E0B"/><path d="M40 66q10 7 20 0" fill="none" stroke="#334155" stroke-width="2.5" stroke-linecap="round"/></svg>` },
+  { id: 'tea', kw: 'tra hong drama tea', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="28" fill="#F3E8FF" stroke="#334155" stroke-width="2.5"/><circle cx="40" cy="44" r="3.5" fill="#1E293B"/><circle cx="60" cy="44" r="3.5" fill="#1E293B"/><rect x="38" y="56" width="24" height="20" rx="4" fill="#FFF" stroke="#334155" stroke-width="2.5"/><path d="M62 60h6a4 4 0 0 1 0 8h-6" fill="none" stroke="#334155" stroke-width="2.5"/></svg>` }
+];
+
 function renderStickerGrid() {
   const g = document.getElementById('spGrid');
   if (stickerTab === 'emoji') {
@@ -747,9 +767,23 @@ function renderStickerGrid() {
     g.innerHTML = emojis.map(e => `<button class="sp-emo" onclick="addEmo('${e}');document.getElementById('stickerPopup').style.display='none'">${e}</button>`).join('');
   } else {
     g.className = 'sp-grid stickers';
-    const stks = [['👋 HI!','#E0F2FE'],['😂 HAHA','#FEF3C7'],['😍 YÊU','#FCE7F3'],['👍 OK!','#DCFCE7'],['😭 HUHU','#E0E7FF'],['🔥 ĐỈNH','#FFEDD5'],['🎉 CHÚC MỪNG','#F3E8FF'],['🙏 CẢM ƠN','#CCFBF1'],['❤️ TIM','#FEE2E2']];
-    g.innerHTML = stks.map(([t,bg]) => `<button class="sp-stk" style="background:${bg}" onclick="document.getElementById('msgIn').value='${t}';sendMsg();document.getElementById('stickerPopup').style.display='none'">${t}</button>`).join('');
+    const q = (document.getElementById('stkSearchIn')?.value || '').trim().toLowerCase();
+    const list = STICKERS.filter(s => !q || s.kw.includes(q) || s.id.includes(q));
+    g.innerHTML = `<div style="grid-column:1/-1;margin-bottom:4px"><input id="stkSearchIn" value="${esc(q)}" placeholder="Tìm kiếm sticker" oninput="renderStickerGrid()" style="border-radius:18px;padding:6px 12px;font-size:13px;background:#F4F5F7;border:none"></div>
+      <div style="grid-column:1/-1;font-size:12.5px;font-weight:600;color:var(--text)">Gần đây</div>` +
+      list.map(s => `<button class="sp-stk" onclick="sendSticker('${s.id}')">${s.svg}</button>`).join('');
   }
+}
+
+async function sendSticker(id) {
+  document.getElementById('stickerPopup').style.display = 'none';
+  const content = `[STICKER:${id}]`;
+  const payload = { type: curId === 'my_cloud' ? 'my_cloud' : (curIsGroup ? 'group_message' : 'direct_message'), content, timestamp: new Date().toTimeString().slice(0, 5) };
+  if (curIsGroup) payload.groupId = curId; else if (curId !== 'my_cloud') payload.toUser = curId;
+  const res = await api('/api/send', 'POST', payload);
+  const d = await res.json();
+  payload.username = me; payload.displayName = myName; payload.messageId = d.messageId;
+  pushMsg(curId, payload);
 }
 document.addEventListener('click', e => {
   const pop = document.getElementById('stickerPopup');
