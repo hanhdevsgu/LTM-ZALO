@@ -189,6 +189,7 @@ public class MiniHttpServer {
         sendJson(ex, 200, buildSessionPayload(token, ws));
     }
 
+    /** [History / State / Sender] Gom toàn bộ lịch sử chat, danh sách user, avatar, nhóm, bạn bè, ghim và cảm xúc khi đăng nhập/F5 */
     private Map<String, Object> buildSessionPayload(String token, WebClientSession ws) {
         String me = ws.getUsername();
         SocialStore ss = dispatcher.getSocialStore();
@@ -226,6 +227,7 @@ public class MiniHttpServer {
         sendJson(ex, 200, Map.of("success", true, "message", "Đăng ký thành công! Hãy đăng nhập."));
     }
 
+    /** [P2P / Group / Time / Sender] Nhận tin nhắn JSON từ Web, ép thông tin người gửi từ token và chuyển cho MessageDispatcher */
     private void handleApiSend(HttpExchange ex) throws IOException {
         WebClientSession ws = requireAuth(ex);
         if (ws == null) return;
@@ -238,6 +240,7 @@ public class MiniHttpServer {
         sendJson(ex, 200, Map.of("ok", true, "messageId", msg.getMessageId()));
     }
 
+    /** [State / Realtime] Trả về tin nhắn mới trong inbox, trạng thái online/lastSeen, cảm xúc, ghim và nhóm */
     private void handleApiPoll(HttpExchange ex) throws IOException {
         WebClientSession ws = requireAuth(ex);
         if (ws == null) return;

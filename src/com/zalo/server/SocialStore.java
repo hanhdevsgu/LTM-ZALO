@@ -214,6 +214,7 @@ public class SocialStore {
     // ==================== CẢM XÚC, ẨN TIN, GHIM TIN, TRẠNG THÁI HỘI THOẠI ====================
 
     /** Thả hoặc gỡ cảm xúc (mỗi người 1 emoji/tin nhắn; bấm lại đúng emoji cũ sẽ gỡ) */
+    /** [Emoji] Lưu/cộng dồn nhiều cảm xúc hoặc xóa toàn bộ cảm xúc của người dùng trên một tin nhắn */
     public Map<String, Integer> toggleReaction(String messageId, String username, String emoji) {
         String u = username.toLowerCase();
         try (Connection conn = DatabaseManager.getConnection()) {

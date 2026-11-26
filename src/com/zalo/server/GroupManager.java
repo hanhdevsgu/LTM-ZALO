@@ -65,6 +65,7 @@ public class GroupManager {
         return groups.get(groupId);
     }
 
+    /** [Group] Trưởng nhóm thêm thành viên mới vào nhóm và lưu SQLite */
     public synchronized boolean addMember(String groupId, String actor, String newMember) {
         GroupInfo g = groups.get(groupId);
         if (g == null || newMember == null) return false;
@@ -75,6 +76,7 @@ public class GroupManager {
         return true;
     }
 
+    /** [Group] Trưởng nhóm xóa thành viên khỏi nhóm và cập nhật SQLite */
     public synchronized boolean removeMember(String groupId, String actor, String target) {
         GroupInfo g = groups.get(groupId);
         if (g == null || target == null) return false;
@@ -91,6 +93,7 @@ public class GroupManager {
         return true;
     }
 
+    /** [Group] Trưởng nhóm chuyển quyền trưởng nhóm cho thành viên khác */
     public synchronized boolean transferOwner(String groupId, String actor, String newOwner) {
         GroupInfo g = groups.get(groupId);
         if (g == null) return false;
@@ -126,6 +129,7 @@ public class GroupManager {
         return "OK";
     }
 
+    /** [Group] Giải tán nhóm và xóa toàn bộ thành viên liên quan khỏi SQLite */
     public synchronized boolean disbandGroup(String groupId, String actor) {
         GroupInfo g = groups.get(groupId);
         if (g == null) return false;

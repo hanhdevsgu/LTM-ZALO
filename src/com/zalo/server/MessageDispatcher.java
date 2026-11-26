@@ -154,6 +154,7 @@ public class MessageDispatcher {
         }
     }
 
+    /** [P2P] Xử lý tin nhắn riêng 1-1: kiểm tra chặn, lưu SQLite, tăng chưa đọc và chuyển tới người nhận */
     private void handleDirectMessage(ClientSession session, ChatMessage msg) {
         if (!session.isAuthenticated()) return;
 
@@ -192,6 +193,7 @@ public class MessageDispatcher {
         }
     }
 
+    /** [Group] Xử lý tin nhắn nhóm: lưu SQLite và phát tới toàn bộ thành viên đang online trong nhóm */
     private void handleGroupMessage(ClientSession session, ChatMessage msg) {
         if (!session.isAuthenticated()) return;
 
@@ -218,6 +220,7 @@ public class MessageDispatcher {
         }
     }
 
+    /** [History] Thu hồi tin nhắn: cập nhật trạng thái thu hồi trong SQLite và đồng bộ tới các máy liên quan */
     private void handleRecallMessage(ClientSession session, ChatMessage msg) {
         if (!session.isAuthenticated()) return;
 
@@ -245,6 +248,7 @@ public class MessageDispatcher {
         }
     }
 
+    /** [State] Phát trạng thái "đang soạn tin..." tới người nhận 1-1 hoặc các thành viên khác trong nhóm */
     private void handleTypingIndicator(ClientSession session, ChatMessage msg) {
         if (!session.isAuthenticated()) return;
 
@@ -267,6 +271,7 @@ public class MessageDispatcher {
         }
     }
 
+    /** [File / Image / Video / Sound] Lưu metadata tệp đính kèm vào SQLite và chuyển tiếp cho người nhận hoặc nhóm */
     private void handleFileTransfer(ClientSession session, ChatMessage msg) {
         if (!session.isAuthenticated()) return;
 
@@ -289,6 +294,7 @@ public class MessageDispatcher {
         }
     }
 
+    /** [Cloud cá nhân] Lưu ghi chú/tệp riêng tư của người dùng vào SQLite */
     private void handleMyCloud(ClientSession session, ChatMessage msg) {
         if (!session.isAuthenticated()) return;
         msg.setUsername(session.getUsername());
@@ -298,6 +304,7 @@ public class MessageDispatcher {
         session.send(msg); // Lưu và phản hồi lại chính người dùng
     }
 
+    /** [Group] Tạo nhóm chat mới và thông báo tới các thành viên đang online */
     private void handleGroupCreate(ClientSession session, ChatMessage msg) {
         if (!session.isAuthenticated()) return;
 
