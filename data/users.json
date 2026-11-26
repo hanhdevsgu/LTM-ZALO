@@ -1,0 +1,20 @@
+{
+  "chi": {
+    "username": "chi",
+    "passwordHash": "HPryhAKYG2GkkzVO9gtYv0yrweuI6Z04F6ZX39ZHDOs\u003d",
+    "salt": "R+p4bOQn5fbNVGkPk1QDPw\u003d\u003d",
+    "displayName": "Lê Kim Chi"
+  },
+  "an": {
+    "username": "an",
+    "passwordHash": "C0S4h66+FaLaBQtw0OPOQ5898DOkP1UZAKe6x+SES2Q\u003d",
+    "salt": "noorn5n/Hcd0HIAnRRkoFw\u003d\u003d",
+    "displayName": "Nguyễn Văn An"
+  },
+  "binh": {
+    "username": "binh",
+    "passwordHash": "HFcBEds94Kgr9Rvv8Cli7eCYQw0M/7rny4o2LmITV7k\u003d",
+    "salt": "CyxGH7lMPn81Y0qsKuknrQ\u003d\u003d",
+    "displayName": "Trần Thị Bình"
+  }
+}

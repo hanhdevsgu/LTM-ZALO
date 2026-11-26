@@ -1,0 +1,11 @@
+bin/
+slides/
+extracted_slides/
+*.pptx
+*.exe
+data/uploads/
+data/ftp_files/
+data/*.db
+data/*.db-*
+*.log
+.DS_Store
