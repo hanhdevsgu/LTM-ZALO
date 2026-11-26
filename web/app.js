@@ -223,8 +223,10 @@ async function poll() {
   if (d.groups) groups = d.groups;
   (d.events || []).forEach(handleEvent);
   updateBadges();
-  renderConvList();
-  renderPinnedBar();
+  const cm = document.getElementById('convItemMenu');
+  if (!cm || cm.style.display !== 'block') renderConvList();
+  const pm = document.getElementById('pinnedMoreMenu');
+  if (!pm || pm.style.display !== 'block') renderPinnedBar();
 }
 
 function updateBadges() {
@@ -321,7 +323,9 @@ function renderHeaderAndDrawer() {
   const av = document.getElementById('chatHeaderAvatar');
   const g = curIsGroup ? groups.find(x => x.id === curId) : null;
   const u = !curIsGroup && curId !== 'my_cloud' ? contacts.find(x => x.username === curId) : null;
+  const grpAv = curIsGroup ? (localStorage.getItem('zalo_grp_av_' + curId) || '') : '';
   if (u && u.avatarUrl) av.innerHTML = `<img src="${esc(u.avatarUrl)}">`;
+  else if (grpAv) av.innerHTML = `<img src="${esc(grpAv)}">`;
   else av.innerText = curId === 'my_cloud' ? '☁️' : curName.substring(0, 1).toUpperCase();
   av.style.background = curId === 'my_cloud' ? '#0068FF' : avColor(curName);
   document.getElementById('chatSub').innerText = curId === 'my_cloud' ? 'Lưu trữ cá nhân' : (g ? `${(g.members || []).length} thành viên` : formatLastSeen(u));
@@ -512,7 +516,8 @@ function renderConvList() {
     const prev = last ? (last.isRecalled ? 'Tin nhắn đã được thu hồi' : (last.fileName ? '📎 ' + last.fileName : (last.content === '[FRIEND_OK]' ? 'Các bạn đã trở thành bạn bè' : (last.content || '').replace(/^\[QUOTE:[^\]]+\]\s*/, '')))) : it.defSub;
     const time = last ? (last.timestamp || '') : '';
     const uObj = !it.isGrp && it.id !== 'my_cloud' ? contacts.find(x => x.username === it.id) : null;
-    const init = it.id === 'my_cloud' ? '☁️' : (uObj && uObj.avatarUrl ? `<img src="${esc(uObj.avatarUrl)}">` : esc(it.name.substring(0, 1).toUpperCase()));
+    const grpAv = it.isGrp ? (localStorage.getItem('zalo_grp_av_' + it.id) || '') : '';
+    const init = it.id === 'my_cloud' ? '☁️' : (uObj && uObj.avatarUrl ? `<img src="${esc(uObj.avatarUrl)}">` : (grpAv ? `<img src="${esc(grpAv)}">` : esc(it.name.substring(0, 1).toUpperCase())));
     const pinIcon = isPinned ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" style="vertical-align:-2px;margin-right:3px"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>` : '';
     const muteIcon = st.muted ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" style="vertical-align:-2px;margin-left:4px"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><line x1="1" y1="1" x2="23" y2="23"/></svg>` : '';
     return `<div class="conv-item ${curId === it.id ? 'active' : ''}" onclick="selectConv('${it.id}','${esc(it.name)}',${it.isGrp})">
@@ -1284,14 +1289,61 @@ async function respondReq(u, ok) {
 }
 
 function openCreateGroupModal() {
-  const checks = contacts.filter(u => u.username !== me).map(u => `<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" style="width:auto" value="${esc(u.username)}"> ${esc(u.displayName)}</label>`).join('');
-  showModal(`<div class="modal-head"><span>Tạo nhóm trò chuyện mới</span><button onclick="closeModal()">✕</button></div><label>Tên nhóm</label><input id="grpNameIn" placeholder="Nhập tên nhóm..."><label>Chọn thành viên</label><div id="grpChecks">${checks}</div><button class="btn-primary" onclick="submitCreateGroup()">Tạo nhóm</button>`);
+  window._newGrpAvatar = '';
+  const camSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+  showModal(`<div class="modal-head"><span>Tạo nhóm</span><button onclick="closeModal()">✕</button></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <button id="grpAvBtn" class="grp-av-pick" title="Chọn ảnh nhóm" onclick="document.getElementById('grpAvIn').click()">${camSvg}</button>
+      <input id="grpAvIn" type="file" accept="image/*" hidden onchange="uploadGroupAvatar(this)">
+      <input id="grpNameIn" class="grp-name-line" placeholder="Nhập tên nhóm...">
+    </div>
+    <input id="grpSearchIn" placeholder="Nhập tên để tìm kiếm..." oninput="renderCreateGroupList()" style="border-radius:20px;padding:9px 14px;background:#F8FAFC;margin-bottom:10px">
+    <div style="font-weight:600;font-size:13.5px;margin-bottom:6px">Trò chuyện gần đây</div>
+    <div id="grpChecks" style="max-height:240px;overflow-y:auto"></div>
+    <div class="modal-footer-btns">
+      <button class="btn-sec" style="width:auto;margin:0;padding:9px 18px" onclick="closeModal()">Hủy</button>
+      <button class="btn-primary" style="width:auto;margin:0;padding:9px 20px" onclick="submitCreateGroup()">Tạo nhóm</button>
+    </div>`);
+  renderCreateGroupList();
 }
+
+function renderCreateGroupList() {
+  const q = (document.getElementById('grpSearchIn')?.value || '').trim().toLowerCase();
+  const checked = new Set([...document.querySelectorAll('#grpChecks input:checked')].map(c => c.value));
+  const list = contacts.filter(u => u.username !== me).filter(u => {
+    const name = (getAlias(u.username) || u.displayName || u.username).toLowerCase();
+    return !q || name.includes(q);
+  });
+  document.getElementById('grpChecks').innerHTML = list.map(u => {
+    const name = getAlias(u.username) || u.displayName || u.username;
+    const av = u.avatarUrl ? `<img src="${esc(u.avatarUrl)}">` : esc(name.slice(0, 2).toUpperCase());
+    return `<label class="cv-row" style="cursor:pointer;margin:0;padding:8px 4px;border:none">
+      <input type="checkbox" class="round-check" value="${esc(u.username)}" ${checked.has(u.username)?'checked':''}>
+      <div class="av-circle" style="width:38px;height:38px;font-size:14px;background:${avColor(name)}">${av}</div>
+      <span style="font-weight:500;font-size:14.5px">${esc(name)}</span>
+    </label>`;
+  }).join('');
+}
+
+async function uploadGroupAvatar(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const up = await fetch('/api/upload?folder=avatars&name=' + encodeURIComponent(f.name), { method: 'POST', headers: { 'X-Zalo-Token': token }, body: f }).then(r => r.json());
+  if (up.ok) {
+    window._newGrpAvatar = up.url;
+    const btn = document.getElementById('grpAvBtn');
+    if (btn) btn.innerHTML = `<img src="${esc(up.url)}">`;
+  }
+}
+
 async function submitCreateGroup() {
   const name = document.getElementById('grpNameIn').value.trim();
   const members = [...document.querySelectorAll('#grpChecks input:checked')].map(c => c.value);
+  if (!name) { document.getElementById('grpNameIn').focus(); return; }
   const res = await api('/api/groups/create', 'POST', { groupName: name, members }).then(r => r.json());
-  if (res.ok) { closeModal(); await poll(); selectConv(res.groupId, res.groupName, true); }
+  if (res.ok) {
+    if (window._newGrpAvatar) localStorage.setItem('zalo_grp_av_' + res.groupId, window._newGrpAvatar);
+    closeModal(); await poll(); selectConv(res.groupId, res.groupName, true);
+  }
 }
 
 async function openConvMenuModal() {
@@ -1483,7 +1535,7 @@ function renderForwardList() {
     const key = (t.isGroup ? 'g:' : 'u:') + t.id;
     const checked = window._fwdSelected.has(key);
     return `<label class="cv-row" style="cursor:pointer;margin:0;padding:8px 10px">
-      <input type="checkbox" style="width:18px;height:18px;accent-color:var(--zalo)" ${checked?'checked':''} onchange="toggleFwdTarget('${esc(key)}',this.checked)">
+      <input type="checkbox" class="round-check" ${checked?'checked':''} onchange="toggleFwdTarget('${esc(key)}',this.checked)">
       <div class="avatar" style="width:36px;height:36px;background:${t.id==='my_cloud'?'#0068FF':avColor(t.name)};color:#fff;flex-shrink:0">${t.id==='my_cloud'?'☁️':esc(t.name.slice(0,2).toUpperCase())}</div>
       <span style="font-weight:500;font-size:14.5px">${esc(t.name)}</span>
     </label>`;
