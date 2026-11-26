@@ -68,7 +68,7 @@ public class GroupManager {
     public synchronized boolean addMember(String groupId, String actor, String newMember) {
         GroupInfo g = groups.get(groupId);
         if (g == null || newMember == null) return false;
-        if (!"chung".equals(groupId) && !g.getCreatedBy().equalsIgnoreCase(actor)) return false;
+        if (!g.getCreatedBy().equalsIgnoreCase(actor) && !"system".equals(g.getCreatedBy())) return false;
         String u = newMember.trim().toLowerCase();
         g.addMember(u);
         addMemberToDb(groupId, u);
@@ -93,8 +93,8 @@ public class GroupManager {
 
     public synchronized boolean transferOwner(String groupId, String actor, String newOwner) {
         GroupInfo g = groups.get(groupId);
-        if (g == null || "chung".equals(groupId)) return false;
-        if (!g.getCreatedBy().equalsIgnoreCase(actor) || !g.hasMember(newOwner)) return false;
+        if (g == null) return false;
+        if ((!g.getCreatedBy().equalsIgnoreCase(actor) && !"system".equals(g.getCreatedBy())) || !g.hasMember(newOwner)) return false;
         g.setCreatedBy(newOwner);
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement("UPDATE groups SET owner = ? WHERE group_id = ?")) {
@@ -108,7 +108,7 @@ public class GroupManager {
     /** Rời nhóm: bắt buộc trưởng nhóm phải chuyển quyền trước khi rời (trừ nhóm chung) */
     public synchronized String leaveGroup(String groupId, String username) {
         GroupInfo g = groups.get(groupId);
-        if (g == null || "chung".equals(groupId)) return "Không thể rời nhóm mặc định!";
+        if (g == null) return "Nhóm không tồn tại!";
         String u = username.toLowerCase();
         if (g.getCreatedBy().equalsIgnoreCase(u) && g.getMembers().size() > 1) {
             return "Trưởng nhóm phải chuyển quyền trưởng nhóm trước khi rời!";
@@ -128,8 +128,8 @@ public class GroupManager {
 
     public synchronized boolean disbandGroup(String groupId, String actor) {
         GroupInfo g = groups.get(groupId);
-        if (g == null || "chung".equals(groupId)) return false;
-        if (!g.getMembers().isEmpty() && !g.getCreatedBy().equalsIgnoreCase(actor)) return false;
+        if (g == null) return false;
+        if (!g.getMembers().isEmpty() && !g.getCreatedBy().equalsIgnoreCase(actor) && !"system".equals(g.getCreatedBy())) return false;
         groups.remove(groupId);
         try (Connection conn = DatabaseManager.getConnection()) {
             try (PreparedStatement ps = conn.prepareStatement("DELETE FROM group_members WHERE group_id = ?")) {

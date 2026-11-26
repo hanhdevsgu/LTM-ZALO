@@ -556,7 +556,7 @@ function openConvItemMenu(ev, id) {
   menu.innerHTML = `
     <button onclick="togglePinConv('${esc(id)}')">${isPinned ? 'Bỏ ghim hội thoại' : 'Ghim hội thoại'}</button>
     <button onclick="hideConv('${esc(id)}')">Ẩn trò chuyện</button>
-    ${gObj && id !== 'chung' ? (isGrpOwner ? `<button style="color:#EF4444" onclick="document.getElementById('convItemMenu').style.display='none';curId='${esc(id)}';disbandGrp()">Giải tán nhóm</button>` : `<button style="color:#EF4444" onclick="document.getElementById('convItemMenu').style.display='none';curId='${esc(id)}';leaveGrp()">Rời nhóm</button>`) : ''}
+    ${gObj ? (isGrpOwner ? `<button style="color:#EF4444" onclick="document.getElementById('convItemMenu').style.display='none';curId='${esc(id)}';disbandGrp()">Giải tán nhóm</button>` : `<button style="color:#EF4444" onclick="document.getElementById('convItemMenu').style.display='none';curId='${esc(id)}';leaveGrp()">Rời nhóm</button>`) : ''}
     <div class="msg-more-div"></div>
     <button style="color:#EF4444" onclick="deleteConvHistory('${esc(id)}')">Xóa hội thoại</button>`;
   menu.style.display = 'block';
@@ -1134,7 +1134,8 @@ function openMembersDrawer() {
   document.getElementById('rightDrawer').style.display = 'flex';
   document.getElementById('btnToggleDrawer').classList.add('active-drawer');
   const g = groups.find(x => x.id === curId) || { members: [], owner: 'system' };
-  const isOwner = g.owner === me;
+  const ownerUser = (g.owner && g.owner !== 'system') ? g.owner : ((g.members && g.members[0]) || '');
+  const isOwner = (g.owner === me) || (g.owner === 'system' && me === ownerUser);
   document.getElementById('rdBody').innerHTML = `
     <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
       <button class="modal-back-btn" onclick="renderRightDrawer()">‹</button>
@@ -1143,7 +1144,7 @@ function openMembersDrawer() {
     <div style="padding:12px 14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <span style="font-size:13.5px;font-weight:600;color:var(--text)">Danh sách thành viên (${(g.members||[]).length})</span>
-        ${isOwner && curId !== 'chung' ? `<button class="mem-add-btn" onclick="openConvMenuModal()">+ Thêm</button>` : ''}
+        ${isOwner ? `<button class="mem-add-btn" onclick="openConvMenuModal()">+ Thêm</button>` : ''}
       </div>
       <input id="memSearchIn" placeholder="Tìm kiếm thành viên" oninput="renderMembersDrawerList()" style="padding:8px 12px;border-radius:18px;background:#EAEDF0;border:none;font-size:13.5px;margin-bottom:10px">
       <div id="memDrawerList"></div>
@@ -1180,9 +1181,9 @@ function renderMembersDrawerList() {
       ${isOwner && !isMe ? `<button class="pinned-more-btn" title="Quản lý thành viên" onclick="openMemberActionMenu(event,'${esc(m)}','${esc(name)}')">${dotsSvg}</button>` : ''}
     </div>`;
   }).join('');
-  const footer = curId !== 'chung' ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+  const footer = `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
     ${isOwner ? `<button class="btn-danger" style="margin:0" onclick="disbandGrp()">Giải tán nhóm</button>` : `<button class="btn-danger" style="margin:0" onclick="leaveGrp()">Rời nhóm</button>`}
-  </div>` : '';
+  </div>`;
   document.getElementById('memDrawerList').innerHTML = (rows || '<div style="text-align:center;color:var(--muted);padding:16px;font-size:13px">Không tìm thấy thành viên</div>') + footer;
 }
 
@@ -1361,8 +1362,8 @@ async function openConvMenuModal() {
 
 async function addMem() { await api('/api/groups/add-member', 'POST', { groupId: curId, username: document.getElementById('addMemIn').value.trim() }); await poll(); openConvMenuModal(); }
 async function transferOwner(u) { await api('/api/groups/transfer-owner', 'POST', { groupId: curId, newOwner: u }); await poll(); openConvMenuModal(); }
-async function leaveGrp() { const r = await api('/api/groups/leave', 'POST', { groupId: curId }).then(x => x.json()); if (!r.ok) alert(r.message); else { closeModal(); await poll(); selectConv('chung', 'Nhóm Chung Toàn Khoa (SGU)', true); } }
-async function disbandGrp() { await api('/api/groups/disband', 'POST', { groupId: curId }); closeModal(); await poll(); selectConv('chung', 'Nhóm Chung Toàn Khoa (SGU)', true); }
+async function leaveGrp() { const r = await api('/api/groups/leave', 'POST', { groupId: curId }).then(x => x.json()); if (!r.ok) alert(r.message); else { closeModal(); await poll(); selectConv('my_cloud', 'Cloud của tôi', false); } }
+async function disbandGrp() { await api('/api/groups/disband', 'POST', { groupId: curId }); closeModal(); await poll(); selectConv('my_cloud', 'Cloud của tôi', false); }
 async function unfriend(u) { await api('/api/friends/unfriend', 'POST', { targetUser: u }); await poll(); closeModal(); }
 async function toggleBlock(u, b) { await api('/api/block', 'POST', { targetUser: u, block: b }); closeModal(); }
 async function toggleMute(m) { await api('/api/mute', 'POST', { convId: curId, muted: m }); await poll(); closeModal(); }
