@@ -217,18 +217,19 @@ public class SocialStore {
     public Map<String, Integer> toggleReaction(String messageId, String username, String emoji) {
         String u = username.toLowerCase();
         try (Connection conn = DatabaseManager.getConnection()) {
-            String existing = null;
-            try (PreparedStatement ps = conn.prepareStatement("SELECT emoji FROM message_reactions WHERE message_id=? AND username=?")) {
-                ps.setString(1, messageId); ps.setString(2, u);
-                try (ResultSet rs = ps.executeQuery()) { if (rs.next()) existing = rs.getString(1); }
-            }
-            if (emoji.equals(existing)) {
+            if (emoji == null || emoji.trim().isEmpty()) {
                 try (PreparedStatement ps = conn.prepareStatement("DELETE FROM message_reactions WHERE message_id=? AND username=?")) {
                     ps.setString(1, messageId); ps.setString(2, u); ps.executeUpdate();
                 }
             } else {
+                String existing = null;
+                try (PreparedStatement ps = conn.prepareStatement("SELECT emoji FROM message_reactions WHERE message_id=? AND username=?")) {
+                    ps.setString(1, messageId); ps.setString(2, u);
+                    try (ResultSet rs = ps.executeQuery()) { if (rs.next()) existing = rs.getString(1); }
+                }
+                String nextVal = (existing == null || existing.isEmpty()) ? emoji : (existing + "," + emoji);
                 try (PreparedStatement ps = conn.prepareStatement("INSERT OR REPLACE INTO message_reactions(message_id, username, emoji) VALUES(?,?,?)")) {
-                    ps.setString(1, messageId); ps.setString(2, u); ps.setString(3, emoji); ps.executeUpdate();
+                    ps.setString(1, messageId); ps.setString(2, u); ps.setString(3, nextVal); ps.executeUpdate();
                 }
             }
         } catch (SQLException ignored) {}
@@ -238,10 +239,14 @@ public class SocialStore {
     public Map<String, Integer> getReactionsForMessage(String messageId) {
         Map<String, Integer> counts = new LinkedHashMap<>();
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT emoji, COUNT(*) AS cnt FROM message_reactions WHERE message_id=? GROUP BY emoji")) {
+             PreparedStatement ps = conn.prepareStatement("SELECT emoji FROM message_reactions WHERE message_id=?")) {
             ps.setString(1, messageId);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) counts.put(rs.getString("emoji"), rs.getInt("cnt"));
+                while (rs.next()) {
+                    for (String e : rs.getString(1).split(",")) {
+                        if (!e.isEmpty()) counts.merge(e, 1, Integer::sum);
+                    }
+                }
             }
         } catch (SQLException ignored) {}
         return counts;
@@ -250,11 +255,13 @@ public class SocialStore {
     public Map<String, Map<String, Integer>> getAllReactionsMap() {
         Map<String, Map<String, Integer>> map = new HashMap<>();
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT message_id, emoji, COUNT(*) AS cnt FROM message_reactions GROUP BY message_id, emoji");
+             PreparedStatement ps = conn.prepareStatement("SELECT message_id, emoji FROM message_reactions");
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                map.computeIfAbsent(rs.getString("message_id"), k -> new LinkedHashMap<>())
-                        .put(rs.getString("emoji"), rs.getInt("cnt"));
+                Map<String, Integer> inner = map.computeIfAbsent(rs.getString(1), k -> new LinkedHashMap<>());
+                for (String e : rs.getString(2).split(",")) {
+                    if (!e.isEmpty()) inner.merge(e, 1, Integer::sum);
+                }
             }
         } catch (SQLException ignored) {}
         return map;

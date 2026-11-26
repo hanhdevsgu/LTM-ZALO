@@ -667,13 +667,16 @@ function renderMsgs() {
     }
 
     const reacts = reactions[m.messageId] || {};
-    const reactHtml = Object.entries(reacts).map(([emo, cnt]) => `<span class="react-chip" onclick="reactMsg('${m.messageId}','${emo}')">${emo} ${cnt}</span>`).join('');
+    const reactEntries = Object.entries(reacts);
+    const totalReacts = reactEntries.reduce((s, [, c]) => s + c, 0);
+    const reactHtml = totalReacts > 0 ? `<span class="react-chip">${reactEntries.map(([e]) => e).join('')} ${totalReacts}</span>` : '';
+    const trigEmo = (window._myLastReact && window._myLastReact[m.messageId]) || (reactEntries.length ? reactEntries[reactEntries.length - 1][0] : '👍');
     const isStarred = starred.some(s => s.messageId === m.messageId);
     const rawPreview = (m.content || m.fileName || '').replace(/^\[QUOTE:[^\]]+\]\s*/, '').slice(0, 80);
     const moreId = 'more_' + idx;
     const reactTrigger = m.messageId && !m.isRecalled ? `<div class="react-trigger-wrap">${reactHtml}
-      <div class="react-picker">${['👍','❤️','😆','😮','😢','😡'].map(e => `<button onclick="reactMsg('${m.messageId}','${e}')">${e}</button>`).join('')}</div>
-      <button class="react-trigger-btn" onclick="reactMsg('${m.messageId}','👍')" title="Thả cảm xúc">👍</button>
+      <div class="react-picker">${['👍','❤️','😆','😮','😢','😡'].map(e => `<button onclick="reactMsg('${m.messageId}','${e}')">${e}</button>`).join('')}${totalReacts > 0 ? `<button onclick="reactMsg('${m.messageId}','')" title="Bỏ cảm xúc" style="color:#64748B;font-size:15px;padding-left:6px">✕</button>` : ''}</div>
+      <button class="react-trigger-btn" onclick="reactMsg('${m.messageId}','${trigEmo}')" title="Thả cảm xúc">${trigEmo}</button>
     </div>` : '';
     const sideActions = m.messageId && !m.isRecalled ? `<div class="msg-side-actions">
       <button class="msg-side-btn" title="Trả lời" onclick="setReply('${esc(m.displayName||m.username)}','${esc(rawPreview)}',${isMe})"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 7H6a4 4 0 0 0-4 4v3h5v5h5v-7a5 5 0 0 0-2-5zm12 0h-4a4 4 0 0 0-4 4v3h5v5h5v-7a5 5 0 0 0-2-5z"/></svg></button>
@@ -946,7 +949,12 @@ function cancelVoiceRecord() {
   }
 }
 
-async function reactMsg(msgId, emo) { const d = await api('/api/react', 'POST', { messageId: msgId, emoji: emo }).then(r => r.json()); if (d.ok) { reactions[msgId] = d.reactions; renderMsgs(); } }
+async function reactMsg(msgId, emo) {
+  if (!window._myLastReact) window._myLastReact = {};
+  if (emo) window._myLastReact[msgId] = emo; else delete window._myLastReact[msgId];
+  const d = await api('/api/react', 'POST', { messageId: msgId, emoji: emo }).then(r => r.json());
+  if (d.ok) { reactions[msgId] = d.reactions; renderMsgs(); }
+}
 async function recallMsg(msgId) {
   const payload = { type: 'recall_message', messageId: msgId };
   if (curIsGroup) payload.groupId = curId; else payload.toUser = curId;
