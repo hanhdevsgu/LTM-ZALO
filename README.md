@@ -1,6 +1,7 @@
 # ĐỒ ÁN MẠNG MÁY TÍNH & LẬP TRÌNH MẠNG: ZALO SECURE TCP CHAT
-> **Ứng dụng Trò chuyện Máy tính Bảo mật (Desktop Chat App) phong cách Zalo**  
-> Xây dựng bằng **Java 17+**, tuân thủ 100% chuẩn kiến trúc slide bài giảng **Chương 16.1 - Lập trình Mạng (Bảo mật mạng • Secure TCP Chat - ĐH Sài Gòn)**.
+> **Ứng dụng Trò chuyện Bảo mật (Web + Desktop Chat App) phong cách Zalo**  
+> Xây dựng bằng **Java 17+**, **SQLite (`data/zalo.db`)**, **TLS 1.3**, **UDP Discovery/Multicast**, **HTTP/HTTPS** & **FTP**.  
+> 📥 **Tải Slide (ZIP):** [Nhấn vào đây để tải `slideltmt.zip` (288.86 MB)](https://github.com/hanhdevsgu/LTM-ZALO/releases/download/slides/slideltmt.zip)
 
 ---
 
@@ -8,11 +9,11 @@
 
 1. **Bảo mật kênh truyền cấp cao (TLS 1.3 & X.509 Certificate)**:
    - Toàn bộ lưu lượng gói tin (từ thông tin đăng nhập đến nội dung tin nhắn) đều được mã hóa bằng thuật toán đối xứng mạnh đàm phán trong quá trình TLS Handshake.
-   - Server quản lý khóa bí mật (Private Key) trong kho khóa **PKCS12 Keystore (`server.p12`)**. Client chỉ nhận chứng chỉ công khai **(`server.crt`)** để tin cậy Server (khớp Slide 6 & 8).
-2. **Khóa ghi độc quyền (Thread-Safe SendLock - Slide 20 & 26)**:
+   - Server quản lý khóa bí mật (Private Key) trong kho khóa **PKCS12 Keystore (`server.p12`)**. Client chỉ nhận chứng chỉ công khai **(`server.crt`)** để tin cậy Server.
+2. **Khóa ghi độc quyền (Thread-Safe SendLock)**:
    - Mỗi `ClientSession` sở hữu một khóa độc quyền `private final ReentrantLock sendLock`.
    - Ngăn chặn hoàn toàn lỗi đan xen byte (`Byte Interleaving`) khi nhiều luồng cùng Broadcast tin nhắn tới một Client.
-3. **Mật khẩu băm an toàn (PBKDF2/BCrypt - Slide 22)**:
+3. **Mật khẩu băm an toàn (PBKDF2 / Salt)**:
    - Mật khẩu người dùng được băm kèm Salt ngẫu nhiên và lưu tại `data/users.json`. Tuyệt đối không lưu và không in mật khẩu dạng rõ ra màn hình hay file log.
 4. **Giao diện hiện đại phong cách Zalo Desktop (FlatLaf Swing)**:
    - Bố cục 3 cột: Thanh Sidebar Zalo Blue `#0068FF`, Cột danh bạ & tìm kiếm có chấm tròn trạng thái trực tuyến (Online/Offline), Khung chat với bong bóng xanh/trắng, emoji bar và tự động cuộn.
