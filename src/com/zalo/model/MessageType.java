@@ -2,7 +2,7 @@ package com.zalo.model;
 
 /**
  * Định nghĩa chuẩn các loại thông điệp trao đổi giữa Client và Server
- * Tuân thủ thiết kế tại Slide 10 & Đặc tả Zalo PC Việt Nam 100%
+ * Định nghĩa các loại gói tin theo Đặc tả Zalo PC Việt Nam 100%
  */
 public enum MessageType {
     LOGIN("login"),

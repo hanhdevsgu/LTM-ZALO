@@ -9,7 +9,7 @@ import java.util.Base64;
 
 /**
  * Tiện ích bảo mật băm mật khẩu chuẩn NIST (PBKDF2WithHmacSHA256)
- * Tuân thủ Slide 22: Lưu Password an toàn, không so sánh và không lưu plain text
+ * Xử lý bảo mật & kết nối: Lưu Password an toàn, không so sánh và không lưu plain text
  */
 public class SecurityHelper {
     private static final int ITERATIONS = 10000;

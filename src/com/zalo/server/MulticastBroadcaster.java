@@ -6,7 +6,7 @@ import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Chương 10: UDP Multicast (Phía gửi thông báo từ Server)
+ * UDP Multicast (Phía gửi thông báo từ Server)
  * Gửi thông báo toàn hệ thống tới nhóm Multicast 239.1.1.1:8000.
  */
 public class MulticastBroadcaster {

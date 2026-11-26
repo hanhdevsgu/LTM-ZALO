@@ -7,8 +7,7 @@ import java.io.IOException;
 
 /**
  * Tác vụ xử lý kết nối riêng biệt cho từng Client (Worker Thread)
- * Tuân thủ Slide 14 & Slide 28:
- * - Chạy bất đồng bộ trong Thread / ExecutorService riêng biệt.
+ * Xử lý bảo mật & kết nối: * - Chạy bất đồng bộ trong Thread / ExecutorService riêng biệt.
  * - Đọc tin nhắn liên tục, bắt ngoại lệ và thu hồi tài nguyên an toàn trong finally.
  */
 public class ClientHandler implements Runnable {
@@ -43,7 +42,7 @@ public class ClientHandler implements Runnable {
             System.err.println("[ClientHandler] Lỗi bất ngờ: " + e.getMessage());
             e.printStackTrace();
         } finally {
-            // Dọn dẹp tài nguyên an toàn theo Slide 28
+            // Dọn dẹp tài nguyên an toàn
             sessionRegistry.removeSession(session);
         }
     }

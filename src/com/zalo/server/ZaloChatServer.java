@@ -11,8 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Máy chủ Zalo Secure TCP Chat Server
- * Tuân thủ toàn diện Slide 12, Slide 14, Slide 18 & Slide 20:
- * - Khởi tạo SSLContext từ certificates/server.p12
+ * Khởi tạo và điều phối Server: * - Khởi tạo SSLContext từ certificates/server.p12
  * - Mở cổng SSLServerSocket 5000 (TLS 1.2 / TLS 1.3)
  * - Vòng lặp Accept Loop tiếp nhận nhiều Client đồng thời qua ExecutorService
  * - Phân phối định danh Client ID duy nhất (nextClientId++)
@@ -42,7 +41,7 @@ public class ZaloChatServer {
             SessionRegistry sessionRegistry = new SessionRegistry(userStore);
             MessageDispatcher dispatcher = new MessageDispatcher(userStore, sessionRegistry, groupManager);
 
-            // 2. Tạo SSLContext từ Keystore theo Slide 12
+            // 2. Tạo SSLContext từ Keystore
             System.out.println("[Server] Đang nạp chứng chỉ TLS từ " + SSLContextFactory.KEYSTORE_PATH + "...");
             SSLContext sslContext = SSLContextFactory.createServerSSLContext();
             SSLServerSocketFactory ssf = sslContext.getServerSocketFactory();
@@ -54,10 +53,10 @@ public class ZaloChatServer {
             System.out.println("[Server] Đã khởi động thành công và đang lắng nghe tại cổng " + port + " (TLS 1.2 / TLS 1.3)");
             System.out.println("[Server] Sẵn sàng phục vụ các Client kết nối an toàn...");
 
-            // 4. ThreadPool phục vụ các Client đồng thời theo Slide 14
+            // 4. ThreadPool phục vụ các Client đồng thời
             ExecutorService threadPool = Executors.newCachedThreadPool();
 
-            // 4.1 Khởi động dịch vụ phụ trợ (Chương 8-9 UDP Discovery + Chương 12-13 HTTP/Web API)
+            // 4.1 Khởi động dịch vụ phụ trợ
             UdpDiscoveryServer udpServer = new UdpDiscoveryServer(port);
             Thread udpThread = new Thread(udpServer, "UDP-Discovery");
             udpThread.setDaemon(true);

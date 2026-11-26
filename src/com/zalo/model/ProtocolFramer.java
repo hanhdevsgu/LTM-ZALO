@@ -9,8 +9,7 @@ import java.io.IOException;
 
 /**
  * Động cơ Phân khung và Giải mã gói tin Stream TCP
- * Tuân thủ Slide 10, Slide 24 và Slide 26:
- * - Ký tự xuống dòng '\n' là ranh giới phân tách thông điệp (Line Delimiter).
+ * Xử lý bảo mật & kết nối: * - Ký tự xuống dòng '\n' là ranh giới phân tách thông điệp (Line Delimiter).
  * - Giới hạn kích thước tối đa 16KB để phòng chống tấn công DoS/OOM.
  * - Tuần tự hóa JSON an toàn với Gson.
  */

@@ -10,8 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Sổ đăng ký phiên làm việc tập trung (Session Registry)
- * Tuân thủ Slide 20 & Slide 28:
- * - Dùng ConcurrentHashMap đảm bảo Thread-safe khi nhiều luồng truy cập đồng thời.
+ * Xử lý bảo mật & kết nối: * - Dùng ConcurrentHashMap đảm bảo Thread-safe khi nhiều luồng truy cập đồng thời.
  * - Quản lý trạng thái Online / Offline thời gian thực.
  */
 public class SessionRegistry {

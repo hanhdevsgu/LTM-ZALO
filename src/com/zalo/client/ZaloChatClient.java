@@ -13,8 +13,7 @@ import java.util.function.Consumer;
 
 /**
  * Lớp điều khiển mạng chính phía Client
- * Tuân thủ Slide 30, Slide 32, Slide 33 & Slide 34:
- * - Khởi tạo SSLSocket và thực hiện TLS Handshake với Server.
+ * Xử lý bảo mật & kết nối: * - Khởi tạo SSLSocket và thực hiện TLS Handshake với Server.
  * - Quản lý luồng gửi với ReentrantLock và luồng nhận với ReceiveTask.
  */
 public class ZaloChatClient implements AutoCloseable {
@@ -46,7 +45,7 @@ public class ZaloChatClient implements AutoCloseable {
     }
 
     /**
-     * Kết nối TCP và thực hiện TLS Handshake tới Server (Slide 30, 32)
+     * Kết nối TCP và thực hiện TLS Handshake tới Server
      */
     public boolean connect(String host, int port) {
         try {

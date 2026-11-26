@@ -10,8 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Quản lý phiên kết nối của một Client
- * Tuân thủ nghiêm ngặt Slide 20 & Slide 26:
- * - Mỗi ClientSession sở hữu riêng một ReentrantLock sendLock.
+ * Xử lý luồng mạng và giao thức: * - Mỗi ClientSession sở hữu riêng một ReentrantLock sendLock.
  * - Mọi thao tác gửi tin (ghi OutputStream) đều phải bọc trong sendLock để chống đan xen byte.
  */
 public class ClientSession implements AutoCloseable {

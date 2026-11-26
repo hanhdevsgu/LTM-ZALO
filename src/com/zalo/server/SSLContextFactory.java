@@ -9,8 +9,7 @@ import java.security.KeyStore;
 
 /**
  * Khởi tạo SSLContext và cấu hình bảo mật TLS cho Server
- * Tuân thủ Slide 12, Slide 16 và Slide 18:
- * - Nạp chứng chỉ từ certificates/server.p12 (PKCS12 Keystore).
+ * Xử lý bảo mật & kết nối: * - Nạp chứng chỉ từ certificates/server.p12 (PKCS12 Keystore).
  * - Ép buộc giao thức mạnh TLS 1.3 và TLS 1.2, chặn SSL 2.0/3.0, TLS 1.0/1.1.
  */
 public class SSLContextFactory {
@@ -39,7 +38,7 @@ public class SSLContextFactory {
     }
 
     public static void configureServerSocket(SSLServerSocket serverSocket) {
-        // Chỉ cho phép TLS 1.2 và TLS 1.3 như Slide 18
+        // Chỉ cho phép TLS 1.2 và TLS 1.3
         serverSocket.setEnabledProtocols(new String[]{"TLSv1.3", "TLSv1.2"});
         serverSocket.setNeedClientAuth(false); // Không bắt buộc client cert cho đồ án chat
     }

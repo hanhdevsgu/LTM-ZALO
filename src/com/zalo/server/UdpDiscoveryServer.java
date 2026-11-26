@@ -5,7 +5,7 @@ import java.net.DatagramSocket;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Chương 8 & 9: UDP Datagram & UDP Broadcast
+ * UDP Datagram & UDP Broadcast
  * Server lắng nghe gói tin UDP ở cổng 5001 để Client trong mạng LAN tự tìm thấy IP/Port.
  */
 public class UdpDiscoveryServer implements Runnable {

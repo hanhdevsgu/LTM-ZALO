@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 
 /**
- * Chương 10: Nhận Multicast liên tục (Java)
+ * Nhận Multicast liên tục (Java)
  * Client tham gia nhóm 239.1.1.1:8000 để nhận thông báo chung từ Server.
  */
 public class MulticastReceiverTask implements Runnable {

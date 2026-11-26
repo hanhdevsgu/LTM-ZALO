@@ -15,7 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Chương 14/15: FTP Server (File Transfer Protocol - RFC 959)
+ * FTP Server (File Transfer Protocol - RFC 959)
  * Hỗ trợ 2 kênh TCP tách biệt:
  * - Control Connection (cổng 2121): USER, PASS, PWD, CWD, CDUP, TYPE, PASV, LIST, NLST, RETR, STOR, DELE, SYST, FEAT, NOOP, QUIT
  * - Data Connection (Passive Mode PASV): truyền danh sách tệp và luồng byte tệp tin (ảnh, video, âm thanh, tài liệu)

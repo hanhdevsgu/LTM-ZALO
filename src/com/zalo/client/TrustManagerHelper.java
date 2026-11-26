@@ -9,7 +9,7 @@ import java.security.cert.X509Certificate;
 
 /**
  * Tiện ích cấu hình xác thực chứng chỉ Server phía Client
- * Tuân thủ Slide 32: KIỂM TRA CHỨNG CHỈ SERVER (JAVA)
+ * Xử lý bảo mật & kết nối: KIỂM TRA CHỨNG CHỈ SERVER (JAVA)
  * - Nạp chứng chỉ công khai certificates/server.crt vào TrustStore tạm thời của Client
  * - Hỗ trợ bắt tay TLS an toàn mà không cần cài đặt CA vào hệ điều hành
  */

@@ -6,7 +6,7 @@ import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Chương 8 & 9: UDP Broadcast Client
+ * UDP Broadcast Client
  * Gửi gói tin Broadcast để tự động tìm địa chỉ IP và Port của Zalo Server trong mạng LAN.
  */
 public class UdpDiscoveryClient {

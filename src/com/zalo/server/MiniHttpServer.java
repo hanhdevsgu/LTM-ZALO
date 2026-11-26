@@ -20,7 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Chương 12 & 13: HTTP (8080) & HTTPS (8443) Server + Web API (Thuần Java)
+ * HTTP (8080) & HTTPS (8443) Server + Web API (Thuần Java)
  * - HTTPS cổng 8443 dùng certificates/server.p12 (bắt buộc cho ghi âm Voice Message trên trình duyệt).
  * - Lưu tệp upload ra thư mục data/uploads/ và hỗ trợ HTTP Range streaming cho Video/Âm thanh.
  * - Cung cấp đầy đủ API: Chat, Reaction, Thu hồi/Ẩn tin, Ghim tin, Kết bạn, Chặn, Trang cá nhân, Bài viết, Nhóm.

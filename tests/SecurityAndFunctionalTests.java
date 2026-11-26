@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
- * Bộ kiểm thử toàn diện các kịch bản Bảo mật (Slide 35)
+ * Bộ kiểm thử toàn diện các kịch bản Bảo mật
  * và Các tính năng mở rộng chuẩn Zalo PC Việt Nam 100%
  */
 public class SecurityAndFunctionalTests {
@@ -38,7 +38,7 @@ public class SecurityAndFunctionalTests {
         int passed = 0;
         int total = 13;
 
-        // 6 Kịch bản bảo mật cốt lõi Slide 35
+        // 6 Kịch bản bảo mật cốt lõi
         if (testTC01_ValidLogin()) passed++;
         if (testTC02_InvalidPassword()) passed++;
         if (testTC03_DirectMessage()) passed++;
@@ -46,7 +46,7 @@ public class SecurityAndFunctionalTests {
         if (testTC05_PlainTcpRejection()) passed++;
         if (testTC06_AbruptDisconnect()) passed++;
 
-        // 6 Kịch bản mở rộng Zalo PC & Full Slide (UDP, Multicast, HTTP/API)
+        // 6 Kịch bản mở rộng Zalo PC & mở rộng (UDP, Multicast, HTTP/API)
         if (testTC07_RecallMessage()) passed++;
         if (testTC08_TypingIndicator()) passed++;
         if (testTC09_FileTransfer()) passed++;
@@ -210,7 +210,7 @@ public class SecurityAndFunctionalTests {
     }
 
     private static boolean testTC05_PlainTcpRejection() {
-        System.out.print("[TC05] Chặn kết nối TCP không TLS (Slide 35 - TC05): ");
+        System.out.print("[TC05] Chặn kết nối TCP không TLS: ");
         try {
             try (Socket plainSocket = new Socket(HOST, PORT)) {
                 OutputStream os = plainSocket.getOutputStream();
@@ -233,7 +233,7 @@ public class SecurityAndFunctionalTests {
     }
 
     private static boolean testTC06_AbruptDisconnect() {
-        System.out.print("[TC06] Client ngắt kết nối đột ngột (Slide 35 - TC06): ");
+        System.out.print("[TC06] Client ngắt kết nối đột ngột: ");
         try {
             SSLSocketFactory sf = TrustManagerHelper.createClientSocketFactory(true);
             SSLSocket socket = (SSLSocket) sf.createSocket(HOST, PORT);
@@ -510,13 +510,13 @@ public class SecurityAndFunctionalTests {
     }
 
     private static boolean testTC12_UdpHttpAndMulticast() {
-        System.out.print("[TC12] UDP Discovery + HTTP/Web API + Multicast (Chương 8-13): ");
+        System.out.print("[TC12] UDP Discovery + HTTP/Web API + Multicast: ");
         try {
-            // 1. UDP Broadcast Discovery (Chương 8-9)
+            // 1. UDP Broadcast Discovery
             String[] found = com.zalo.client.UdpDiscoveryClient.discoverServer(2000);
             boolean udpOk = (found != null && "5000".equals(found[1]));
 
-            // 2. HTTP Web API GET /api/status (Chương 12-13)
+            // 2. HTTP Web API GET /api/status
             java.net.URL url = new java.net.URL("http://127.0.0.1:8080/api/status");
             java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
@@ -525,7 +525,7 @@ public class SecurityAndFunctionalTests {
             String body = new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             boolean httpOk = (code == 200 && body.contains("\"online\""));
 
-            // 3. UDP Multicast (Chương 10)
+            // 3. UDP Multicast
             final String[] receivedNotice = {null};
             com.zalo.client.MulticastReceiverTask mTask = new com.zalo.client.MulticastReceiverTask(n -> receivedNotice[0] = n);
             Thread mThread = new Thread(mTask);

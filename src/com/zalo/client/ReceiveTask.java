@@ -9,8 +9,7 @@ import java.util.function.Consumer;
 
 /**
  * Tác vụ nhận tin nhắn bất đồng bộ chạy nền phía Client
- * Tuân thủ nghiêm ngặt Slide 33 & Slide 34:
- * - Chạy trong Thread riêng biệt, không khóa (block) luồng giao diện UI.
+ * Xử lý luồng mạng và giao thức: * - Chạy trong Thread riêng biệt, không khóa (block) luồng giao diện UI.
  * - Đọc liên tục các dòng tin nhắn JSON từ máy chủ và gửi về UI thông qua Consumer callback.
  */
 public class ReceiveTask implements Runnable {
