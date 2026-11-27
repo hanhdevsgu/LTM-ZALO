@@ -243,6 +243,7 @@ function updateBadges() {
 
 function handleEvent(m) {
   if (m.type === 'login_result' && m.users) { contacts = m.users; return; }
+  // [State] Cập nhật danh sách online/offline và trạng thái đang soạn tin (typing)
   if (m.type === 'status_update' || m.type === 'user_list') { if (m.users) contacts = m.users; return; }
   if (m.type === 'typing_indicator') {
     if (m.username === curId || m.groupId === curId) {
@@ -258,6 +259,7 @@ function handleEvent(m) {
   }
   if (m.type === 'system') { pushMsg('chung', m); return; }
   if (m.type === 'my_cloud') { pushMsg('my_cloud', m); return; }
+  // [P2P / Group / File] Nhận tin nhắn 1-1, tin nhắn nhóm hoặc tệp đính kèm từ Server
   if (m.type === 'group_message') { pushMsg(m.groupId || 'chung', m); notifyBrowser(m, m.groupId || 'chung'); return; }
   if (m.type === 'direct_message') { const cid = (m.username === me) ? m.toUser : m.username; pushMsg(cid, m); notifyBrowser(m, cid); return; }
   if (m.type === 'file_transfer') { const cid = m.groupId ? m.groupId : ((m.username === me) ? m.toUser : m.username); pushMsg(cid, m); notifyBrowser(m, cid); }
@@ -271,6 +273,7 @@ function notifyBrowser(m, cid) {
   }
 }
 
+// [State] Lưu tin vào lịch sử cục bộ và tăng số tin chưa đọc (unread) nếu đang ở cuộc trò chuyện khác
 function pushMsg(cid, m) {
   if (!history[cid]) history[cid] = [];
   if (m.messageId && history[cid].some(x => x.messageId === m.messageId)) return;
@@ -305,6 +308,7 @@ async function selectConv(id, name, isGrp) {
   renderMsgs();
 }
 
+// [State] Hiển thị trạng thái hoạt động (Đang hoạt động / Hoạt động X phút trước)
 function formatLastSeen(u) {
   if (!u) return 'Ngoại tuyến';
   if (u.online) return 'Đang hoạt động';
@@ -646,8 +650,11 @@ function renderMsgs() {
       const stk = STICKERS.find(s => s.id === stkMatch[1]) || STICKERS[0];
       content = `<div style="width:104px;height:104px">${stk.svg}</div>`;
     } else if (m.type === 'file_transfer' && fileUrl) {
+      // [Image] Nhận diện tệp ảnh, hiển thị inline và cho phép phóng to qua lightbox
       if (isImg) content = `<img class="preview" src="${fileUrl}" onclick="openImageViewer('${fileUrl}','${esc(m.fileName)}')">`;
+      // [Video] Hiển thị trình phát video hỗ trợ tua (HTTP Range) và nút tải xuống
       else if (/\.(mp4|webm|mov)$/.test(fn) && !fn.startsWith('voice_')) content = `<video controls src="${fileUrl}"></video><a download="${esc(m.fileName)}" href="${fileUrl}" style="font-size:12.5px;color:var(--zalo);text-decoration:none">Tải xuống ${esc(m.fileName)}</a>`;
+      // [Sound] Hiển thị trình phát tin nhắn thoại / âm thanh (.voice-player)
       else if (/\.(mp3|wav|m4a|ogg)$/.test(fn) || fn.startsWith('voice_')) {
         const aid = 'aud_' + idx;
         const bars = [8,14,10,18,12,20,9,16,13,19,11,15,8,17,12,10].map(h => `<span class="vp-bar" style="height:${h}px"></span>`).join('');
@@ -658,6 +665,7 @@ function renderMsgs() {
           <audio id="${aid}" src="${fileUrl}" preload="metadata" onloadedmetadata="initVoiceMeta('${aid}')" ontimeupdate="updateVoiceTime('${aid}')" onended="endVoicePlay('${aid}')"></audio>
         </div>`;
       }
+      // [File] Hiển thị card tệp đính kèm kèm dung lượng và nút xem / tải xuống
       else {
         const [tag, bg] = fileBadgeMeta(m.fileName);
         const dlSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
@@ -668,6 +676,7 @@ function renderMsgs() {
           <a class="file-dl" download="${esc(m.fileName)}" href="${fileUrl}" title="Tải xuống">${dlSvg}</a></div>`;
       }
     } else {
+      // [Sender] Hiển thị tên người gửi (.msg-sender) trong tin nhắn nhóm
       content = (!isMe && curIsGroup && !isSamePrev ? `<div class="msg-sender" onclick="openProfileModal('${esc(m.username)}')">${esc(m.displayName || m.username)}</div>` : '') + formatMsgText(m.content || '');
     }
 
@@ -759,6 +768,7 @@ const STICKERS = [
   { id: 'tea', kw: 'tra hong drama tea', svg: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="28" fill="#F3E8FF" stroke="#334155" stroke-width="2.5"/><circle cx="40" cy="44" r="3.5" fill="#1E293B"/><circle cx="60" cy="44" r="3.5" fill="#1E293B"/><rect x="38" y="56" width="24" height="20" rx="4" fill="#FFF" stroke="#334155" stroke-width="2.5"/><path d="M62 60h6a4 4 0 0 1 0 8h-6" fill="none" stroke="#334155" stroke-width="2.5"/></svg>` }
 ];
 
+// [Emoji] Hiển thị bảng chọn Emoji và bộ Sticker SVG
 function renderStickerGrid() {
   const g = document.getElementById('spGrid');
   if (stickerTab === 'emoji') {
@@ -775,6 +785,7 @@ function renderStickerGrid() {
   }
 }
 
+// [Emoji] Gửi Sticker SVG dưới dạng [STICKER:id] qua /api/send
 async function sendSticker(id) {
   document.getElementById('stickerPopup').style.display = 'none';
   const content = `[STICKER:${id}]`;
@@ -893,6 +904,7 @@ function pickFile(accept) {
   inp.click();
 }
 
+// [P2P / Group / Time] Gửi tin nhắn 1-1 (direct_message) hoặc nhóm (group_message) kèm timestamp HH:MM
 async function sendMsg() {
   const inp = document.getElementById('msgIn');
   let txt = inp.value.trim();
@@ -911,10 +923,12 @@ async function sendMsg() {
   pushMsg(curId, payload);
 }
 
+// [File / Image / Video / Sound] Upload nhị phân tệp lên Server qua POST /api/upload
 async function uploadBinaryFile(file, fileName) {
   return fetch('/api/upload?name=' + encodeURIComponent(fileName), { method: 'POST', headers: { 'X-Zalo-Token': token }, body: file }).then(r => r.json());
 }
 
+// [File / Image / Video] Gửi tệp đính kèm (tối đa 50MB) sau khi upload lấy URL
 async function sendFile(input) {
   const f = input.files[0]; if (!f) return;
   if (f.size > 50 * 1024 * 1024) { alert('Tệp vượt quá 50MB!'); return; }
@@ -929,6 +943,7 @@ async function sendFile(input) {
   input.value = '';
 }
 
+// [Sound] Ghi âm giọng nói qua MediaRecorder, upload .webm và gửi tin nhắn thoại
 async function toggleVoiceRecord() {
   if (mediaRecorder && mediaRecorder.state === 'recording') { stopAndSendVoice(); return; }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert('Vui lòng dùng HTTPS (https://localhost:8443) để ghi âm!'); return; }

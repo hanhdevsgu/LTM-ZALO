@@ -341,6 +341,7 @@ public class SocialStore {
         } catch (SQLException ignored) {}
     }
 
+    /** [State] Tăng bộ đếm tin nhắn chưa đọc (unread_count) trong SQLite */
     public void incrementUnread(String username, String convId) {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(
@@ -350,6 +351,7 @@ public class SocialStore {
         } catch (SQLException ignored) {}
     }
 
+    /** [State] Đánh dấu đã đọc (đặt unread_count = 0) khi người dùng mở hội thoại */
     public void markRead(String username, String convId) {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(

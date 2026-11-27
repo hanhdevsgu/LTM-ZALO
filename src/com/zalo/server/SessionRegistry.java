@@ -52,6 +52,7 @@ public class SessionRegistry {
         System.out.println("[Registry] Đăng ký kết nối mới Client ID: " + session.getId());
     }
 
+    /** [State] Gắn session với user đã xác thực và đánh dấu trạng thái Online */
     public synchronized void bindAuthenticatedUser(ClientSession session, String username, String displayName) {
         String u = username.toLowerCase();
         session.setUsername(u);

@@ -50,6 +50,7 @@ public class GroupManager {
         }
     }
 
+    /** [Group] Tạo nhóm chat mới, lưu vào SQLite và đưa vào bộ nhớ Server */
     public synchronized GroupInfo createGroup(String groupName, String creator, List<String> initialMembers) {
         String groupId = "grp_" + System.currentTimeMillis();
         GroupInfo group = new GroupInfo(groupId, groupName, creator);

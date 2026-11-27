@@ -16,7 +16,7 @@ public class MessageHistoryStore {
         DatabaseManager.init();
     }
 
-    /** [History] Ghi một tin nhắn (chữ, file, ảnh, video, voice) vào bảng messages trong SQLite */
+    /** [History / Time] Ghi một tin nhắn (chữ, file, ảnh, video, voice kèm timestamp) vào bảng messages trong SQLite */
     public void record(ChatMessage msg) {
         if (msg == null || msg.getType() == null) return;
         String sql = "INSERT INTO messages(message_id, type, sender, display_name, to_user, group_id, group_name, content, file_name, file_size, file_data, timestamp, is_recalled) "

@@ -241,7 +241,7 @@ public class MiniHttpServer {
     }
 
     /** [State / Realtime] Trả về tin nhắn mới trong inbox, trạng thái online/lastSeen, cảm xúc, ghim và nhóm */
-    private void handleApiPoll(HttpExchange ex) throws IOException {
+to    private void handleApiPoll(HttpExchange ex) throws IOException {
         WebClientSession ws = requireAuth(ex);
         if (ws == null) return;
         String me = ws.getUsername();
@@ -266,7 +266,7 @@ public class MiniHttpServer {
         sendJson(ex, 200, Map.of("ok", true));
     }
 
-    /** POST /api/upload?name=...&folder=avatars|chat : Lưu file nhị phân trực tiếp ra đĩa */
+    /** [File / Image / Video / Sound] POST /api/upload?name=...&folder=avatars|chat : Lưu tệp nhị phân trực tiếp ra đĩa */
     private void handleApiUpload(HttpExchange ex) throws IOException {
         WebClientSession ws = requireAuth(ex);
         if (ws == null) return;
@@ -294,7 +294,7 @@ public class MiniHttpServer {
         sendJson(ex, 200, Map.of("ok", true, "url", url, "fileName", origName, "fileSize", data.length));
     }
 
-    /** GET /api/files/{sub}/{name} : Phục vụ tệp từ data/uploads/ hỗ trợ HTTP Range (tua Video/Audio) */
+    /** [File / Image / Video / Sound] GET /api/files/{sub}/{name} : Phục vụ tệp từ data/uploads/ hỗ trợ HTTP Range (tua Video/Audio) */
     private void handleServeUploadedFile(HttpExchange ex) throws IOException {
         String rel = ex.getRequestURI().getPath().substring("/api/files/".length());
         Path file = UPLOAD_ROOT.resolve(rel).normalize();
