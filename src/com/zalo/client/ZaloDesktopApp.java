@@ -476,22 +476,25 @@ public class ZaloDesktopApp {
         titleStack.setOpaque(false);
         titleStack.setLayout(new BoxLayout(titleStack, BoxLayout.Y_AXIS));
 
-        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         titleRow.setOpaque(false);
+        titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         lblChatTitle = new JLabel(curName);
         lblChatTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
         lblChatTitle.setForeground(TEXT_MAIN);
         lblTypingHead = new JLabel("");
         lblTypingHead.setFont(new Font("Segoe UI", Font.ITALIC, 12));
         lblTypingHead.setForeground(ZALO_BLUE);
+        lblTypingHead.setBorder(new EmptyBorder(0, 8, 0, 0));
         titleRow.add(lblChatTitle);
         titleRow.add(lblTypingHead);
 
         lblChatSub = new JLabel("Nhóm trò chuyện");
         lblChatSub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblChatSub.setForeground(MUTED);
-        lblChatSub.setBorder(new EmptyBorder(0, 8, 0, 0));
+        lblChatSub.setAlignmentX(Component.LEFT_ALIGNMENT);
         titleStack.add(titleRow);
+        titleStack.add(Box.createVerticalStrut(2));
         titleStack.add(lblChatSub);
 
         headLeft.add(lblHeaderAv);
@@ -592,19 +595,20 @@ public class ZaloDesktopApp {
         rightDrawer.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, BORDER_COL));
         rightDrawer.setLayout(new BoxLayout(rightDrawer, BoxLayout.Y_AXIS));
 
+        JPanel drHeadWrap = new JPanel(new BorderLayout());
+        drHeadWrap.setBackground(Color.WHITE);
+        drHeadWrap.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COL));
+        drHeadWrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
         JLabel drHead = new JLabel("Thông tin hội thoại", SwingConstants.CENTER);
         drHead.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        drHead.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COL),
-                new EmptyBorder(16, 12, 16, 12)
-        ));
-        drHead.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
-        drHead.setAlignmentX(Component.CENTER_ALIGNMENT);
+        drHead.setBorder(new EmptyBorder(16, 12, 16, 12));
+        drHeadWrap.add(drHead, BorderLayout.CENTER);
 
         JPanel drProfile = new JPanel();
         drProfile.setBackground(Color.WHITE);
         drProfile.setLayout(new BoxLayout(drProfile, BoxLayout.Y_AXIS));
         drProfile.setBorder(new EmptyBorder(18, 14, 16, 14));
+        drProfile.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
         lblDrawerAv = new AvatarCircle(56, ZALO_BLUE, "N", false);
         lblDrawerAv.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblDrawerName = new JLabel(curName);
@@ -624,9 +628,10 @@ public class ZaloDesktopApp {
         JPanel drActions = new JPanel(new GridLayout(1, 3, 6, 0));
         drActions.setOpaque(false);
         drActions.setMaximumSize(new Dimension(250, 56));
-        drActions.add(drawerActionBtn("🔔", "Tắt thông báo", () -> JOptionPane.showMessageDialog(mainFrame, "Đã bật/tắt thông báo cho " + curName)));
-        drActions.add(drawerActionBtn("📌", "Ghim hội thoại", () -> JOptionPane.showMessageDialog(mainFrame, "Đã ghim hội thoại " + curName)));
-        drActions.add(drawerActionBtn("👥", "Tạo nhóm", this::openCreateGroupDialog));
+        drActions.setAlignmentX(Component.CENTER_ALIGNMENT);
+        drActions.add(drawerActionBtn("bell", "Tắt thông báo", () -> JOptionPane.showMessageDialog(mainFrame, "Đã bật/tắt thông báo cho " + curName)));
+        drActions.add(drawerActionBtn("pin", "Ghim hội thoại", () -> JOptionPane.showMessageDialog(mainFrame, "Đã ghim hội thoại " + curName)));
+        drActions.add(drawerActionBtn("group", "Tạo nhóm", this::openCreateGroupDialog));
         drProfile.add(drActions);
 
         drawerMediaBox = new JPanel();
@@ -649,7 +654,7 @@ public class ZaloDesktopApp {
         drawerFileBox.setAlignmentX(Component.CENTER_ALIGNMENT);
         drawerFileBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
 
-        rightDrawer.add(drHead);
+        rightDrawer.add(drHeadWrap);
         rightDrawer.add(drProfile);
         rightDrawer.add(drawerMediaBox);
         rightDrawer.add(drawerFileBox);
@@ -1345,7 +1350,13 @@ public class ZaloDesktopApp {
         if (last != null) {
             time = last.getTimestamp() != null ? last.getTimestamp() : "";
             if (last.getIsRecalled()) prev = "Tin nhắn đã được thu hồi";
-            else if (last.getFileName() != null) prev = "📎 " + last.getFileName();
+            else if (last.getFileName() != null) {
+                String fnl = last.getFileName().toLowerCase();
+                String tag = fnl.matches(".*\\.(png|jpg|jpeg|gif|bmp|webp)$") ? "[Ảnh] "
+                        : (fnl.matches(".*\\.(mp4|mov|mkv)$") ? "[Video] "
+                        : (fnl.matches(".*\\.(wav|mp3|ogg|m4a|webm)$") ? "[Thoại] " : "[Tệp] "));
+                prev = tag + last.getFileName();
+            }
             else if (last.getContent() != null) prev = last.getContent();
         }
         if (prev.length() > 26) prev = prev.substring(0, 26) + "...";
@@ -1523,14 +1534,15 @@ public class ZaloDesktopApp {
         outer.add(line);
 
         if (isLastMine) {
-            String st = "SEEN".equals(m.getStatus()) ? "✓✓ Đã xem" : ("DELIVERED".equals(m.getStatus()) ? "✓✓ Đã nhận" : "✓ Đã gửi");
+            String st = "SEEN".equals(m.getStatus()) ? "Đã xem" : ("DELIVERED".equals(m.getStatus()) ? "Đã nhận" : "Đã gửi");
             JPanel pillRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 2));
             pillRow.setOpaque(false);
-            JLabel pill = new JLabel(" " + st + " ");
+            JLabel pill = new JLabel(" " + st + " ", new VectorIcon("check", 11, Color.WHITE), SwingConstants.LEFT);
             pill.setOpaque(true);
             pill.setBackground(new Color(0x94A3B8));
             pill.setForeground(Color.WHITE);
             pill.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            pill.setBorder(new EmptyBorder(2, 6, 2, 6));
             pillRow.add(pill);
             outer.add(pillRow);
         }
@@ -1594,11 +1606,21 @@ public class ZaloDesktopApp {
             g2.setColor(bg);
             g2.fill(new Ellipse2D.Float(0, 0, size - 1, size - 1));
             g2.setColor(Color.WHITE);
-            g2.setFont(new Font("Segoe UI Emoji", Font.BOLD, Math.max(12, size / 3)));
-            FontMetrics fm = g2.getFontMetrics();
-            int x = (size - fm.stringWidth(letter)) / 2;
-            int y = (size - fm.getHeight()) / 2 + fm.getAscent();
-            g2.drawString(letter, x, y);
+            if ("☁".equals(letter)) {
+                int cw = Math.round(size * 0.56f);
+                int cx = (size - cw) / 2;
+                int cy = Math.round(size * 0.34f);
+                g2.fillOval(cx, cy + cw / 5, cw / 2, cw / 2);
+                g2.fillOval(cx + cw / 5, cy, cw / 2, cw / 2);
+                g2.fillOval(cx + cw / 2, cy + cw / 6, cw / 2, cw / 2);
+                g2.fillRect(cx + cw / 4, cy + cw / 3, cw / 2, cw / 3 + 1);
+            } else {
+                g2.setFont(new Font("Segoe UI", Font.BOLD, Math.max(12, size / 3)));
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (size - fm.stringWidth(letter)) / 2;
+                int y = (size - fm.getHeight()) / 2 + fm.getAscent();
+                g2.drawString(letter, x, y);
+            }
             if (online) {
                 int d = Math.max(9, size / 4);
                 g2.setColor(Color.WHITE);
@@ -1631,8 +1653,7 @@ public class ZaloDesktopApp {
         JPanel p = new JPanel();
         p.setOpaque(false);
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        JButton b = new JButton(icon);
-        b.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 15));
+        JButton b = new JButton(new VectorIcon(icon, 16, new Color(0x475569)));
         b.setPreferredSize(new Dimension(34, 34));
         b.setMaximumSize(new Dimension(34, 34));
         b.setBackground(new Color(0xF1F5F9));
@@ -2103,6 +2124,23 @@ public class ZaloDesktopApp {
                     int[] px = {s / 2 - 4, s / 2 + 6, s / 2 - 4};
                     int[] py = {s / 2 - 6, s / 2, s / 2 + 6};
                     g2.fillPolygon(px, py, 3);
+                }
+                case "bell" -> {
+                    g2.drawArc(4, 3, s - 8, s - 7, 0, 180);
+                    g2.drawLine(4, 7, 3, s - 5);
+                    g2.drawLine(s - 4, 7, s - 3, s - 5);
+                    g2.drawLine(2, s - 5, s - 2, s - 5);
+                    g2.drawArc(s / 2 - 2, s - 5, 4, 3, 180, 180);
+                }
+                case "pin" -> {
+                    g2.drawLine(5, 3, s - 5, 3);
+                    g2.drawLine(6, 3, 5, 9);
+                    g2.drawLine(s - 6, 3, s - 5, 9);
+                    g2.drawLine(3, 9, s - 3, 9);
+                    g2.drawLine(s / 2, 9, s / 2, s - 2);
+                }
+                case "check" -> {
+                    g2.drawPolyline(new int[]{2, s / 2 - 1, s - 2}, new int[]{s / 2, s - 3, 3}, 3);
                 }
             }
             g2.dispose();
