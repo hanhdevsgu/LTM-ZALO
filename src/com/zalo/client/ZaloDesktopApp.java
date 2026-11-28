@@ -55,13 +55,16 @@ public class ZaloDesktopApp {
 
     private final Gson gson = new Gson();
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
-    private final ExecutorService ioExec = Executors.newCachedThreadPool();
+    private final ExecutorService ioExec = Executors.newFixedThreadPool(10);
     private final Map<String, ImageIcon> thumbCache = new ConcurrentHashMap<>();
     private final Map<String, ImageIcon> miniThumbCache = new ConcurrentHashMap<>();
     private final Map<String, Path> savedLocalPaths = new ConcurrentHashMap<>();
     private final Map<String, Long> typingMap = new ConcurrentHashMap<>();
     private final java.util.concurrent.atomic.AtomicBoolean polling = new java.util.concurrent.atomic.AtomicBoolean(false);
     private String lastPollSig = "";
+    private String lastDrawerSig = "";
+    private boolean batchingEvents = false;
+    private static final Icon LIKE_ICON = new ColorEmojiIcon("👍", 22);
 
     private String serverBase = System.getenv("ZALO_SERVER") != null && !System.getenv("ZALO_SERVER").isBlank()
             ? System.getenv("ZALO_SERVER").trim()
@@ -417,7 +420,7 @@ public class ZaloDesktopApp {
             @Override public void windowClosing(WindowEvent e) {
                 if (pollTimer != null) pollTimer.stop();
                 saveLocalSession();
-                try { postJson("/api/offline", new JsonObject()); } catch (Exception ignored) {}
+                ioExec.submit(() -> { try { postJson("/api/offline", new JsonObject()); } catch (Exception ignored) {} });
             }
         });
 
@@ -811,7 +814,7 @@ public class ZaloDesktopApp {
         String val = txtMsg.getText().trim();
         if (val.isEmpty()) {
             btnMainSend.setText("");
-            btnMainSend.setIcon(new ColorEmojiIcon("👍", 22));
+            btnMainSend.setIcon(LIKE_ICON);
         } else {
             btnMainSend.setIcon(null);
             btnMainSend.setText("Gửi");
@@ -930,7 +933,15 @@ public class ZaloDesktopApp {
                         }
                     }
                     if (hasEvents) {
-                        for (JsonElement el : d.getAsJsonArray("events")) handleEvent(gson.fromJson(el, ChatMessage.class));
+                        batchingEvents = true;
+                        int before = history.containsKey(curId) ? history.get(curId).size() : 0;
+                        try {
+                            for (JsonElement el : d.getAsJsonArray("events")) handleEvent(gson.fromJson(el, ChatMessage.class));
+                        } finally {
+                            batchingEvents = false;
+                        }
+                        int after = history.containsKey(curId) ? history.get(curId).size() : 0;
+                        if (after != before) renderMessages();
                     }
                     if (reactChanged && !hasEvents) renderMessages(false);
                     if (stateChanged || hasEvents) {
@@ -1036,13 +1047,15 @@ public class ZaloDesktopApp {
         }
         if (cid.equalsIgnoreCase(curId)) {
             unreadMap.put(cid, 0);
-            renderMessages();
-            renderHeaderAndDrawer();
+            if (!batchingEvents) {
+                renderMessages();
+                renderHeaderAndDrawer();
+            }
             if (m.getUsername() != null && !me.equalsIgnoreCase(m.getUsername()) && !curIsGroup && !"my_cloud".equals(cid)) {
                 markReadAsync(cid);
             }
         }
-        renderConvList();
+        if (!batchingEvents) renderConvList();
     }
 
     private void selectConv(String id, String name, boolean isGrp) {
@@ -1465,8 +1478,8 @@ public class ZaloDesktopApp {
         if (txtMsg != null) {
             txtMsg.putClientProperty("JTextField.placeholderText", "Nhập @, tin nhắn tới " + curName);
         }
-        Color c = "my_cloud".equals(curId) ? ZALO_BLUE : avColor(curName);
-        String init = "my_cloud".equals(curId) ? "☁" : curName.substring(0, 1).toUpperCase();
+        Color c = "my_cloud".equals(curId) ? ZALO_BLUE : avColor(curId);
+        String init = "my_cloud".equals(curId) ? "☁" : initialsOf(curName);
         lblHeaderAv.update(c, init, false);
         lblDrawerAv.update(c, init, false);
 
@@ -1485,6 +1498,11 @@ public class ZaloDesktopApp {
             lblChatSub.setText(st);
             lblDrawerSub.setText(st);
         }
+
+        List<ChatMessage> arr = history.get(curId);
+        String dSig = curId + "|" + (arr != null ? arr.size() : 0);
+        if (dSig.equals(lastDrawerSig)) return;
+        lastDrawerSig = dSig;
 
         drawerMediaBox.removeAll();
         drawerFileBox.removeAll();
@@ -1505,7 +1523,6 @@ public class ZaloDesktopApp {
         mediaGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
         mediaGrid.setMaximumSize(new Dimension(248, 126));
 
-        List<ChatMessage> arr = history.get(curId);
         int imgs = 0, files = 0;
         if (arr != null) {
             List<ChatMessage> snap;
@@ -1700,7 +1717,8 @@ public class ZaloDesktopApp {
 
             List<ChatMessage> snap;
             synchronized (arr) { snap = new ArrayList<>(arr); }
-            for (int i = 0; i < snap.size(); i++) {
+            int startIdx = Math.max(0, snap.size() - 60);
+            for (int i = startIdx; i < snap.size(); i++) {
                 ChatMessage m = snap.get(i);
                 boolean isLastMine = me.equalsIgnoreCase(m.getUsername()) && i == snap.size() - 1;
                 msgListPanel.add(buildMessageRow(m, isLastMine));
