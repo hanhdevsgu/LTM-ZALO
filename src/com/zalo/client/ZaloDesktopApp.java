@@ -57,6 +57,7 @@ public class ZaloDesktopApp {
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     private final ExecutorService ioExec = Executors.newCachedThreadPool();
     private final Map<String, ImageIcon> thumbCache = new ConcurrentHashMap<>();
+    private final Map<String, ImageIcon> miniThumbCache = new ConcurrentHashMap<>();
     private final Map<String, Path> savedLocalPaths = new ConcurrentHashMap<>();
     private final Map<String, Long> typingMap = new ConcurrentHashMap<>();
     private final java.util.concurrent.atomic.AtomicBoolean polling = new java.util.concurrent.atomic.AtomicBoolean(false);
@@ -571,13 +572,14 @@ public class ZaloDesktopApp {
         chatHead.add(headLeft, BorderLayout.WEST);
         chatHead.add(btnToggleDrawer, BorderLayout.EAST);
 
-        msgListPanel = new JPanel();
+        msgListPanel = new ScrollablePanel();
         msgListPanel.setLayout(new BoxLayout(msgListPanel, BoxLayout.Y_AXIS));
         msgListPanel.setBackground(BG_CHAT);
         msgListPanel.setBorder(new EmptyBorder(14, 18, 14, 18));
         msgScroll = new JScrollPane(msgListPanel);
         msgScroll.setBorder(null);
-        msgScroll.getVerticalScrollBar().setUnitIncrement(18);
+        msgScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        msgScroll.getVerticalScrollBar().setUnitIncrement(24);
 
         // Composer (Toolbar + TypingBar + SendRow)
         JPanel composer = new JPanel(new BorderLayout());
@@ -902,13 +904,17 @@ public class ZaloDesktopApp {
                     }
                     boolean reactChanged = false;
                     if (d.has("reactions") && d.get("reactions").isJsonObject()) {
-                        reactions.clear();
+                        Map<String, Map<String, Integer>> nextReacts = new LinkedHashMap<>();
                         for (Map.Entry<String, JsonElement> entry : d.getAsJsonObject("reactions").entrySet()) {
                             Map<String, Integer> map = new LinkedHashMap<>();
                             for (Map.Entry<String, JsonElement> re : entry.getValue().getAsJsonObject().entrySet()) map.put(re.getKey(), re.getValue().getAsInt());
-                            reactions.put(entry.getKey(), map);
+                            nextReacts.put(entry.getKey(), map);
                         }
-                        reactChanged = true;
+                        if (!nextReacts.equals(reactions)) {
+                            reactions.clear();
+                            reactions.putAll(nextReacts);
+                            reactChanged = true;
+                        }
                     }
                     if (d.has("convStates") && d.get("convStates").isJsonObject()) {
                         for (Map.Entry<String, JsonElement> entry : d.getAsJsonObject("convStates").entrySet()) {
@@ -926,7 +932,7 @@ public class ZaloDesktopApp {
                     if (hasEvents) {
                         for (JsonElement el : d.getAsJsonArray("events")) handleEvent(gson.fromJson(el, ChatMessage.class));
                     }
-                    if (reactChanged && !hasEvents) renderMessages();
+                    if (reactChanged && !hasEvents) renderMessages(false);
                     if (stateChanged || hasEvents) {
                         renderHeaderAndDrawer();
                         renderConvList();
@@ -1665,6 +1671,13 @@ public class ZaloDesktopApp {
     }
 
     private void renderMessages() {
+        JScrollBar sb = msgScroll.getVerticalScrollBar();
+        boolean nearBottom = sb.getMaximum() <= sb.getVisibleAmount() || (sb.getValue() + sb.getVisibleAmount() >= sb.getMaximum() - 100);
+        renderMessages(nearBottom);
+    }
+
+    private void renderMessages(boolean scrollToBottom) {
+        int prevVal = msgScroll.getVerticalScrollBar().getValue();
         msgListPanel.removeAll();
         List<ChatMessage> arr = history.get(curId);
         if (arr == null || arr.isEmpty()) {
@@ -1697,7 +1710,10 @@ public class ZaloDesktopApp {
         }
         msgListPanel.revalidate();
         msgListPanel.repaint();
-        SwingUtilities.invokeLater(() -> msgScroll.getVerticalScrollBar().setValue(msgScroll.getVerticalScrollBar().getMaximum()));
+        SwingUtilities.invokeLater(() -> {
+            JScrollBar sb = msgScroll.getVerticalScrollBar();
+            sb.setValue(scrollToBottom ? sb.getMaximum() : Math.min(prevVal, sb.getMaximum()));
+        });
     }
 
     private JComponent buildMessageRow(ChatMessage m, boolean isLastMine) {
@@ -1845,6 +1861,14 @@ public class ZaloDesktopApp {
         }
         outer.setMaximumSize(new Dimension(Integer.MAX_VALUE, outer.getPreferredSize().height + 4));
         return outer;
+    }
+
+    private static class ScrollablePanel extends JPanel implements Scrollable {
+        @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
+        @Override public int getScrollableUnitIncrement(Rectangle r, int o, int d) { return 24; }
+        @Override public int getScrollableBlockIncrement(Rectangle r, int o, int d) { return 120; }
+        @Override public boolean getScrollableTracksViewportWidth() { return true; }
+        @Override public boolean getScrollableTracksViewportHeight() { return false; }
     }
 
     // ==================== 6. HELPERS & CUSTOM SWING COMPONENTS ====================
@@ -2263,11 +2287,14 @@ public class ZaloDesktopApp {
     }
 
     private void loadMiniThumbAsync(String url, JLabel target) {
+        ImageIcon cached = miniThumbCache.get(url);
+        if (cached != null) { target.setText(""); target.setIcon(cached); return; }
         ioExec.submit(() -> {
             try {
                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(downloadBytes(url)));
                 if (img != null) {
                     ImageIcon icon = new ImageIcon(img.getScaledInstance(56, 56, Image.SCALE_SMOOTH));
+                    miniThumbCache.put(url, icon);
                     SwingUtilities.invokeLater(() -> { target.setText(""); target.setIcon(icon); });
                 }
             } catch (Exception ignored) {}
