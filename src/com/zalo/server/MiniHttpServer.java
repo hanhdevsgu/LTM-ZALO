@@ -53,7 +53,7 @@ public class MiniHttpServer {
             Files.createDirectories(UPLOAD_ROOT.resolve("avatars"));
             httpServer = HttpServer.create(new InetSocketAddress(HTTP_PORT), 0);
             registerContexts(httpServer);
-            httpServer.setExecutor(Executors.newFixedThreadPool(16));
+            httpServer.setExecutor(Executors.newCachedThreadPool());
             httpServer.start();
             System.out.println("[HTTP/API] Đang chạy tại http://localhost:" + HTTP_PORT);
 
@@ -63,7 +63,7 @@ public class MiniHttpServer {
                 httpsServer = HttpsServer.create(new InetSocketAddress(HTTPS_PORT), 0);
                 httpsServer.setHttpsConfigurator(new HttpsConfigurator(sslCtx));
                 registerContexts(httpsServer);
-                httpsServer.setExecutor(Executors.newFixedThreadPool(16));
+                httpsServer.setExecutor(Executors.newCachedThreadPool());
                 httpsServer.start();
                 System.out.println("[HTTPS/API] Đang chạy tại https://localhost:" + HTTPS_PORT + " (Hỗ trợ ghi âm Voice)");
             } catch (Exception ex) {

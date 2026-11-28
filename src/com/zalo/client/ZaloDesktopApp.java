@@ -2371,7 +2371,7 @@ public class ZaloDesktopApp {
     private JsonObject postJson(String path, JsonObject body) throws Exception {
         HttpRequest.Builder b = HttpRequest.newBuilder()
                 .uri(URI.create(serverBase + path))
-                .timeout(Duration.ofSeconds(6))
+                .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/json; charset=utf-8")
                 .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8));
         if (token != null) b.header("X-Zalo-Token", token);
@@ -2382,7 +2382,7 @@ public class ZaloDesktopApp {
     private JsonObject getJson(String path) throws Exception {
         HttpRequest.Builder b = HttpRequest.newBuilder()
                 .uri(URI.create(serverBase + path))
-                .timeout(Duration.ofSeconds(5))
+                .timeout(Duration.ofSeconds(15))
                 .GET();
         if (token != null) b.header("X-Zalo-Token", token);
         HttpResponse<String> r = http.send(b.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
