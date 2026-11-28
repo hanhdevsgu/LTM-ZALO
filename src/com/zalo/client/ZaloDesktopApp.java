@@ -54,7 +54,7 @@ public class ZaloDesktopApp {
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
 
     private final Gson gson = new Gson();
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
     private final ExecutorService ioExec = Executors.newCachedThreadPool();
     private final Map<String, ImageIcon> thumbCache = new ConcurrentHashMap<>();
     private final Map<String, ImageIcon> miniThumbCache = new ConcurrentHashMap<>();
