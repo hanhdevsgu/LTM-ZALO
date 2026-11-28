@@ -2014,6 +2014,10 @@ public class ZaloDesktopApp {
         card.add(playBtn, BorderLayout.WEST);
         card.add(info, BorderLayout.CENTER);
         card.add(btns, BorderLayout.EAST);
+        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        card.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) { playOrOpenFile(url, m.getFileName(), fnLower.endsWith(".wav")); }
+        });
         return card;
     }
 
@@ -2221,11 +2225,31 @@ public class ZaloDesktopApp {
         ioExec.submit(() -> {
             try {
                 byte[] data = downloadBytes(url);
+                if (data == null || data.length == 0) throw new IOException("Tệp rỗng hoặc không tải được");
                 if (playWav) {
-                    try (AudioInputStream ais = AudioSystem.getAudioInputStream(new BufferedInputStream(new ByteArrayInputStream(data)))) {
-                        Clip clip = AudioSystem.getClip();
-                        clip.open(ais);
-                        clip.start();
+                    try (AudioInputStream raw = AudioSystem.getAudioInputStream(new BufferedInputStream(new ByteArrayInputStream(data)))) {
+                        AudioFormat baseFmt = raw.getFormat();
+                        AudioFormat playFmt = new AudioFormat(
+                                AudioFormat.Encoding.PCM_SIGNED,
+                                baseFmt.getSampleRate(), 16, baseFmt.getChannels(),
+                                baseFmt.getChannels() * 2, baseFmt.getSampleRate(), false);
+                        try (AudioInputStream din = AudioSystem.getAudioInputStream(playFmt, raw)) {
+                            DataLine.Info info = new DataLine.Info(SourceDataLine.class, playFmt);
+                            try (SourceDataLine line = (SourceDataLine) AudioSystem.getLine(info)) {
+                                line.open(playFmt);
+                                line.start();
+                                byte[] buf = new byte[4096];
+                                int n;
+                                while ((n = din.read(buf, 0, buf.length)) != -1) {
+                                    line.write(buf, 0, n);
+                                }
+                                line.drain();
+                            }
+                        }
+                    } catch (Exception audioEx) {
+                        Path tmp = Files.createTempFile("zalo_", "_" + fileName.replaceAll("[^a-zA-Z0-9._-]", "_"));
+                        Files.write(tmp, data);
+                        Desktop.getDesktop().open(tmp.toFile());
                     }
                 } else {
                     Path tmp = Files.createTempFile("zalo_", "_" + fileName.replaceAll("[^a-zA-Z0-9._-]", "_"));
