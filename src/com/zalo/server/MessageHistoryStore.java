@@ -25,19 +25,19 @@ public class MessageHistoryStore {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, msg.getMessageId());
             ps.setString(2, msg.getType());
-            ps.setString(3, msg.getUsername() != null ? msg.getUsername().toLowerCase() : "");
-            ps.setString(4, msg.getDisplayName());
-            ps.setString(5, msg.getToUser() != null ? msg.getToUser().toLowerCase() : null);
-            ps.setString(6, msg.getGroupId());
-            ps.setString(7, msg.getGroupName());
-            ps.setString(8, msg.getContent());
-            ps.setString(9, msg.getFileName());
-            if (msg.getFileSize() != null) ps.setLong(10, msg.getFileSize());
+            ps.setString(3, msg.getUsername() != null ? msg.getUsername().toLowerCase() : ""); // [Sender] username người gửi
+            ps.setString(4, msg.getDisplayName());                                             // [Sender] tên hiển thị
+            ps.setString(5, msg.getToUser() != null ? msg.getToUser().toLowerCase() : null);   // [P2P] người nhận 1-1
+            ps.setString(6, msg.getGroupId());                                                 // [Group] mã nhóm
+            ps.setString(7, msg.getGroupName());                                               // [Group] tên nhóm
+            ps.setString(8, msg.getContent());                                                 // Nội dung chữ / [STICKER:id]
+            ps.setString(9, msg.getFileName());                                                // [File / Image / Video / Sound] tên tệp
+            if (msg.getFileSize() != null) ps.setLong(10, msg.getFileSize());                  // [File / Image / Video / Sound] dung lượng
             else ps.setNull(10, Types.BIGINT);
-            ps.setString(11, msg.getFileData());
-            ps.setString(12, msg.getTimestamp());
+            ps.setString(11, msg.getFileData());                                               // [File / Image / Video / Sound] đường dẫn /api/files/...
+            ps.setString(12, msg.getTimestamp());                                              // [Time] mốc giờ gửi HH:MM
             ps.setInt(13, msg.getIsRecalled() ? 1 : 0);
-            ps.executeUpdate();
+            ps.executeUpdate(); // [History] Thực thi INSERT ghi thật xuống file SQLite data/zalo.db
         } catch (SQLException e) {
             System.err.println("[History] Lỗi lưu tin nhắn SQLite: " + e.getMessage());
         }

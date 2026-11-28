@@ -36,7 +36,7 @@ public class SessionRegistry {
         } catch (SQLException ignored) {}
     }
 
-    /** Cập nhật thời điểm hoạt động gần nhất vào bộ nhớ và SQLite */
+    /** [State - LastSeen] Cập nhật thời điểm hoạt động gần nhất vào RAM và bảng user_last_seen (SQLite) */
     private void saveLastSeen(String u, long ts) {
         lastSeenMap.put(u, ts);
         try (Connection c = DatabaseManager.getConnection();

@@ -1,4 +1,6 @@
 bin/
+out/
+.playwright-mcp/
 slides/
 extracted_slides/
 *.pptx

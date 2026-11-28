@@ -172,8 +172,8 @@ public class MessageDispatcher {
         // Chống giả mạo người gửi và lưu lịch sử lên Server
         msg.setUsername(session.getUsername());
         msg.setDisplayName(session.getDisplayName());
-        historyStore.record(msg);
-        socialStore.incrementUnread(targetUsername, session.getUsername());
+        historyStore.record(msg); // [History / File / Image / Video / Sound] Lưu metadata tệp đính kèm vào SQLite                                           // [History] Lưu tin 1-1 xuống SQLite
+        socialStore.incrementUnread(targetUsername, session.getUsername()); // [State - Unread] Tăng số tin chưa đọc trong SQLite
 
         ClientSession targetSession = sessionRegistry.getSessionByUsername(targetUsername);
         if (targetSession != null && targetSession.isAuthenticated()) {
@@ -209,7 +209,7 @@ public class MessageDispatcher {
         msg.setUsername(session.getUsername());
         msg.setDisplayName(session.getDisplayName());
         msg.setGroupName(group.getGroupName());
-        historyStore.record(msg);
+        historyStore.record(msg); // [History / File / Image / Video / Sound] Lưu metadata tệp đính kèm vào SQLite
 
         // Broadcast an toàn tới các thành viên online trong nhóm
         for (String memberUser : group.getMembers()) {
@@ -277,7 +277,7 @@ public class MessageDispatcher {
 
         msg.setUsername(session.getUsername());
         msg.setDisplayName(session.getDisplayName());
-        historyStore.record(msg);
+        historyStore.record(msg); // [History / File / Image / Video / Sound] Lưu metadata tệp đính kèm vào SQLite
 
         if (msg.getGroupId() != null) {
             GroupManager.GroupInfo group = groupManager.getGroup(msg.getGroupId());
@@ -299,7 +299,7 @@ public class MessageDispatcher {
         if (!session.isAuthenticated()) return;
         msg.setUsername(session.getUsername());
         msg.setDisplayName(session.getDisplayName());
-        historyStore.record(msg);
+        historyStore.record(msg); // [History / File / Image / Video / Sound] Lưu metadata tệp đính kèm vào SQLite
         msg.setToUser(session.getUsername());
         session.send(msg); // Lưu và phản hồi lại chính người dùng
     }

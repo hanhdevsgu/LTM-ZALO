@@ -119,11 +119,19 @@ public class MiniHttpServer {
         srv.createContext("/api/groups/disband", this::handleGroupDisband);
     }
 
-    private static class WebClientSession extends ClientSession {
+    private class WebClientSession extends ClientSession {
         final Queue<ChatMessage> inbox = new ConcurrentLinkedQueue<>();
         WebClientSession(int id) { super(id); }
         @Override public boolean send(ChatMessage message) {
-            if (message != null) inbox.offer(message);
+            if (message == null) return true;
+            String u = getUsername();
+            if (u != null) {
+                for (WebClientSession peer : webSessions.values()) {
+                    if (u.equalsIgnoreCase(peer.getUsername())) peer.inbox.offer(message);
+                }
+            } else {
+                inbox.offer(message);
+            }
             return true;
         }
     }
@@ -159,6 +167,7 @@ public class MiniHttpServer {
         }
         byte[] bytes = Files.readAllBytes(file);
         ex.getResponseHeaders().set("Content-Type", contentType);
+        ex.getResponseHeaders().set("Cache-Control", "no-store, no-cache, must-revalidate");
         ex.sendResponseHeaders(200, bytes.length);
         try (OutputStream os = ex.getResponseBody()) { os.write(bytes); }
     }
@@ -233,6 +242,7 @@ public class MiniHttpServer {
         if (ws == null) return;
         ChatMessage msg = gson.fromJson(readBody(ex), ChatMessage.class);
         if (msg == null || msg.getType() == null) { sendJson(ex, 400, Map.of("error", "Invalid message")); return; }
+        // [Sender] Ép cứng danh tính người gửi từ phiên đăng nhập (ws), chống sửa JS giả mạo
         msg.setUsername(ws.getUsername());
         msg.setDisplayName(ws.getDisplayName());
         if (msg.getMessageId() == null) msg.setMessageId(UUID.randomUUID().toString());
@@ -241,7 +251,7 @@ public class MiniHttpServer {
     }
 
     /** [State / Realtime] Trả về tin nhắn mới trong inbox, trạng thái online/lastSeen, cảm xúc, ghim và nhóm */
-to    private void handleApiPoll(HttpExchange ex) throws IOException {
+    private void handleApiPoll(HttpExchange ex) throws IOException {
         WebClientSession ws = requireAuth(ex);
         if (ws == null) return;
         String me = ws.getUsername();
@@ -307,6 +317,7 @@ to    private void handleApiPoll(HttpExchange ex) throws IOException {
         ex.getResponseHeaders().set("Content-Type", mime);
         ex.getResponseHeaders().set("Accept-Ranges", "bytes");
 
+        // [Video / Sound] Xử lý HTTP Range (206 Partial Content) + RandomAccessFile.seek() để hỗ trợ tua mượt
         String rangeHeader = ex.getRequestHeaders().getFirst("Range");
         if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
             String[] parts = rangeHeader.substring(6).split("-", 2);
@@ -329,6 +340,7 @@ to    private void handleApiPoll(HttpExchange ex) throws IOException {
                 }
             }
         } else {
+            // [Image / File] Trả toàn bộ tệp một mạch (HTTP 200 OK)
             ex.sendResponseHeaders(200, len);
             try (InputStream is = Files.newInputStream(file); OutputStream os = ex.getResponseBody()) {
                 is.transferTo(os);
@@ -336,6 +348,7 @@ to    private void handleApiPoll(HttpExchange ex) throws IOException {
         }
     }
 
+    /** [Emoji] Nhận yêu cầu thả/gỡ cảm xúc và lưu vào bảng message_reactions trong SQLite */
     private void handleApiReact(HttpExchange ex) throws IOException {
         WebClientSession ws = requireAuth(ex);
         if (ws == null) return;
@@ -391,11 +404,23 @@ to    private void handleApiPoll(HttpExchange ex) throws IOException {
         sendJson(ex, 200, Map.of("ok", true));
     }
 
+    /** [State - Unread / Seen] Đánh dấu đã đọc (unread_count = 0) và báo ✓✓ Đã xem cho người gửi 1-1 */
     private void handleApiRead(HttpExchange ex) throws IOException {
         WebClientSession ws = requireAuth(ex);
         if (ws == null) return;
         JsonObject req = gson.fromJson(readBody(ex), JsonObject.class);
-        dispatcher.getSocialStore().markRead(ws.getUsername(), getStr(req, "convId"));
+        String convId = getStr(req, "convId");
+        dispatcher.getSocialStore().markRead(ws.getUsername(), convId);
+        if (!convId.isEmpty() && !"my_cloud".equals(convId) && dispatcher.getGroupManager().getGroup(convId) == null) {
+            ClientSession peer = sessionRegistry.getSessionByUsername(convId);
+            if (peer != null && peer.isAuthenticated()) {
+                ChatMessage seen = new ChatMessage("message_status");
+                seen.setUsername(ws.getUsername());
+                seen.setToUser(convId);
+                seen.setStatus("SEEN");
+                peer.send(seen);
+            }
+        }
         sendJson(ex, 200, Map.of("ok", true));
     }
 
@@ -512,6 +537,7 @@ to    private void handleApiPoll(HttpExchange ex) throws IOException {
         sendJson(ex, ok ? 200 : 403, Map.of("ok", ok));
     }
 
+    /** [Sender / State] Gom danh sách user kèm trạng thái online/lastSeen và đường dẫn avatar */
     private List<UserInfo> buildUsersWithAvatars() {
         List<UserInfo> list = sessionRegistry.buildContactsList();
         for (UserInfo u : list) {
