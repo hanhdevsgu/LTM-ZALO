@@ -99,6 +99,7 @@ public class ZaloDesktopApp {
     private ByteArrayOutputStream wavBuffer;
 
     public static void main(String[] args) {
+        Thread.setDefaultUncaughtExceptionHandler((t, ex) -> ex.printStackTrace());
         try {
             FlatLightLaf.setup();
             UIManager.put("Button.arc", 10);
@@ -1165,7 +1166,7 @@ public class ZaloDesktopApp {
         p.add(Box.createVerticalStrut(8));
         p.add(new JLabel("Chọn thành viên:"));
         List<JCheckBox> checks = new ArrayList<>();
-        for (JsonObject u : contacts) {
+        for (JsonObject u : new ArrayList<>(contacts)) {
             String uname = u.get("username").getAsString();
             if (uname.equalsIgnoreCase(me)) continue;
             String dn = u.has("displayName") ? u.get("displayName").getAsString() : uname;
@@ -1174,7 +1175,7 @@ public class ZaloDesktopApp {
             checks.add(cb);
             p.add(cb);
         }
-        if (JOptionPane.showConfirmDialog(mainFrame, p, "Tạo nhóm chat", JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return;
+        if (JOptionPane.showConfirmDialog(mainFrame, p, "Tạo nhóm chat", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
         String gname = txtName.getText().trim();
         if (gname.isEmpty()) return;
         JsonArray mems = new JsonArray();
@@ -1187,9 +1188,23 @@ public class ZaloDesktopApp {
                 JsonObject res = postJson("/api/groups/create", req);
                 if (res != null && res.has("ok") && res.get("ok").getAsBoolean()) {
                     String gid = res.get("groupId").getAsString();
-                    SwingUtilities.invokeLater(() -> selectConv(gid, gname, true));
+                    JsonObject gObj = new JsonObject();
+                    gObj.addProperty("id", gid);
+                    gObj.addProperty("name", gname);
+                    JsonArray allMems = mems.deepCopy();
+                    allMems.add(me);
+                    gObj.add("members", allMems);
+                    SwingUtilities.invokeLater(() -> {
+                        groups.add(gObj);
+                        selectConv(gid, gname, true);
+                    });
+                } else {
+                    String err = (res != null && res.has("error")) ? res.get("error").getAsString() : "Không tạo được nhóm";
+                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainFrame, err));
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainFrame, "Lỗi tạo nhóm: " + ex.getMessage()));
+            }
         });
     }
 
