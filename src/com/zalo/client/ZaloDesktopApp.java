@@ -59,6 +59,8 @@ public class ZaloDesktopApp {
     private final Map<String, ImageIcon> thumbCache = new ConcurrentHashMap<>();
     private final Map<String, Path> savedLocalPaths = new ConcurrentHashMap<>();
     private final Map<String, Long> typingMap = new ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicBoolean polling = new java.util.concurrent.atomic.AtomicBoolean(false);
+    private String lastPollSig = "";
 
     private String serverBase = System.getenv("ZALO_SERVER") != null && !System.getenv("ZALO_SERVER").isBlank()
             ? System.getenv("ZALO_SERVER").trim()
@@ -741,7 +743,7 @@ public class ZaloDesktopApp {
         renderHeaderAndDrawer();
         renderMessages();
 
-        pollTimer = new javax.swing.Timer(1200, e -> pollServer());
+        pollTimer = new javax.swing.Timer(250, e -> pollServer());
         pollTimer.start();
 
         mainFrame.setVisible(true);
@@ -873,11 +875,18 @@ public class ZaloDesktopApp {
     }
 
     private void pollServer() {
-        if (token == null) return;
+        if (token == null || !polling.compareAndSet(false, true)) return;
         ioExec.submit(() -> {
             try {
                 JsonObject d = getJson("/api/poll?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8));
                 if (d == null) return;
+                boolean hasEvents = d.has("events") && d.get("events").isJsonArray() && d.getAsJsonArray("events").size() > 0;
+                String sig = (d.has("users") ? d.get("users").toString() : "") + "|"
+                        + (d.has("groups") ? d.get("groups").toString() : "") + "|"
+                        + (d.has("reactions") ? d.get("reactions").toString() : "");
+                boolean stateChanged = !sig.equals(lastPollSig);
+                if (!hasEvents && !stateChanged) return;
+                lastPollSig = sig;
                 SwingUtilities.invokeLater(() -> {
                     if (d.has("users") && d.get("users").isJsonArray()) {
                         contacts.clear();
@@ -887,6 +896,7 @@ public class ZaloDesktopApp {
                         groups.clear();
                         for (JsonElement el : d.getAsJsonArray("groups")) groups.add(el.getAsJsonObject());
                     }
+                    boolean reactChanged = false;
                     if (d.has("reactions") && d.get("reactions").isJsonObject()) {
                         reactions.clear();
                         for (Map.Entry<String, JsonElement> entry : d.getAsJsonObject("reactions").entrySet()) {
@@ -894,6 +904,7 @@ public class ZaloDesktopApp {
                             for (Map.Entry<String, JsonElement> re : entry.getValue().getAsJsonObject().entrySet()) map.put(re.getKey(), re.getValue().getAsInt());
                             reactions.put(entry.getKey(), map);
                         }
+                        reactChanged = true;
                     }
                     if (d.has("convStates") && d.get("convStates").isJsonObject()) {
                         for (Map.Entry<String, JsonElement> entry : d.getAsJsonObject("convStates").entrySet()) {
@@ -908,13 +919,19 @@ public class ZaloDesktopApp {
                             }
                         }
                     }
-                    if (d.has("events") && d.get("events").isJsonArray()) {
+                    if (hasEvents) {
                         for (JsonElement el : d.getAsJsonArray("events")) handleEvent(gson.fromJson(el, ChatMessage.class));
                     }
-                    renderHeaderAndDrawer();
-                    renderConvList();
+                    if (reactChanged && !hasEvents) renderMessages();
+                    if (stateChanged || hasEvents) {
+                        renderHeaderAndDrawer();
+                        renderConvList();
+                    }
                 });
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            } finally {
+                polling.set(false);
+            }
         });
     }
 
