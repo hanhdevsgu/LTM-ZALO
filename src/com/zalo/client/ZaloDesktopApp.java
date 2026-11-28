@@ -1672,6 +1672,7 @@ public class ZaloDesktopApp {
                 msgListPanel.add(buildMessageRow(m, isLastMine));
                 msgListPanel.add(Box.createVerticalStrut(8));
             }
+            msgListPanel.add(Box.createVerticalGlue());
         }
         msgListPanel.revalidate();
         msgListPanel.repaint();
@@ -1759,7 +1760,7 @@ public class ZaloDesktopApp {
             meta.append(" ").append(total);
         }
         JLabel metaLbl = new JLabel(meta.toString());
-        metaLbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 11));
+        metaLbl.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
         metaLbl.setForeground(MUTED);
         metaLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         bubble.add(Box.createVerticalStrut(4));
@@ -1767,8 +1768,8 @@ public class ZaloDesktopApp {
 
         if (m.getMessageId() != null && !m.getIsRecalled()) {
             JPopupMenu ctx = new JPopupMenu();
-            for (String em : new String[]{"👍", "❤️", "😆", "😮", "😢", "😡"}) {
-                JMenuItem it = new JMenuItem("Thả " + em);
+            for (String em : new String[]{"👍", "❤️", "😂", "😮", "😢", "😡"}) {
+                JMenuItem it = new JMenuItem("Thả " + em, new ColorEmojiIcon(em, 16));
                 it.addActionListener(e -> reactMessage(m.getMessageId(), em));
                 ctx.add(it);
             }
@@ -1787,7 +1788,22 @@ public class ZaloDesktopApp {
             bubble.setComponentPopupMenu(ctx);
         }
 
+        JButton btnReact = null;
+        if (m.getMessageId() != null && !m.getIsRecalled()) {
+            btnReact = new JButton(new ColorEmojiIcon("👍", 14));
+            btnReact.setPreferredSize(new Dimension(26, 26));
+            btnReact.setBackground(Color.WHITE);
+            btnReact.setToolTipText("Thả cảm xúc");
+            btnReact.setMargin(new Insets(0, 0, 0, 0));
+            btnReact.setFocusPainted(false);
+            btnReact.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            JButton refBtn = btnReact;
+            btnReact.addActionListener(e -> showReactionBar(refBtn, m.getMessageId()));
+        }
+
+        if (isMe && btnReact != null) line.add(btnReact);
         line.add(bubble);
+        if (!isMe && btnReact != null) line.add(btnReact);
         if (isMe) {
             line.add(new AvatarCircle(28, avColor(me), initialsOf(myName), true));
         }
@@ -1806,6 +1822,7 @@ public class ZaloDesktopApp {
             pillRow.add(pill);
             outer.add(pillRow);
         }
+        outer.setMaximumSize(new Dimension(Integer.MAX_VALUE, outer.getPreferredSize().height + 4));
         return outer;
     }
 
@@ -1896,6 +1913,30 @@ public class ZaloDesktopApp {
         int h = 0;
         for (int i = 0; i < name.length(); i++) h = 31 * h + name.charAt(i);
         return AV_COLORS[Math.abs(h) % AV_COLORS.length];
+    }
+
+    private void showReactionBar(Component anchor, String msgId) {
+        JPopupMenu pop = new JPopupMenu();
+        pop.setBackground(Color.WHITE);
+        pop.setBorder(BorderFactory.createLineBorder(BORDER_COL));
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
+        bar.setBackground(Color.WHITE);
+        for (String em : new String[]{"👍", "❤️", "😂", "😮", "😢", "😡"}) {
+            JButton b = new JButton(new ColorEmojiIcon(em, 22));
+            b.setPreferredSize(new Dimension(32, 32));
+            b.setBackground(Color.WHITE);
+            b.setBorderPainted(false);
+            b.setFocusPainted(false);
+            b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            b.addActionListener(e -> {
+                pop.setVisible(false);
+                reactMessage(msgId, em);
+            });
+            bar.add(b);
+        }
+        pop.add(bar);
+        Dimension d = pop.getPreferredSize();
+        pop.show(anchor, -d.width / 2 + anchor.getWidth() / 2, -d.height - 4);
     }
 
     private void reactMessage(String msgId, String emoji) {
@@ -2269,11 +2310,22 @@ public class ZaloDesktopApp {
                             try (SourceDataLine line = (SourceDataLine) AudioSystem.getLine(info)) {
                                 line.open(playFmt);
                                 line.start();
-                                byte[] buf = new byte[4096];
-                                int n;
-                                while ((n = din.read(buf, 0, buf.length)) != -1) {
-                                    line.write(buf, 0, n);
+                                byte[] pcm = din.readAllBytes();
+                                int maxAmp = 1;
+                                for (int i = 0; i + 1 < pcm.length; i += 2) {
+                                    int s = Math.abs((short) ((pcm[i] & 0xff) | (pcm[i + 1] << 8)));
+                                    if (s > maxAmp) maxAmp = s;
                                 }
+                                double gain = maxAmp < 12000 ? Math.min(10.0, 20000.0 / maxAmp) : 1.0;
+                                if (gain > 1.05) {
+                                    for (int i = 0; i + 1 < pcm.length; i += 2) {
+                                        short s = (short) ((pcm[i] & 0xff) | (pcm[i + 1] << 8));
+                                        int boosted = Math.max(-32768, Math.min(32767, (int) (s * gain)));
+                                        pcm[i] = (byte) (boosted & 0xff);
+                                        pcm[i + 1] = (byte) ((boosted >> 8) & 0xff);
+                                    }
+                                }
+                                line.write(pcm, 0, pcm.length);
                                 line.drain();
                             }
                         }
