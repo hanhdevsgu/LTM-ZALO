@@ -88,6 +88,7 @@ public class MiniHttpServer {
         srv.createContext("/api/send", this::handleApiSend);
         srv.createContext("/api/poll", this::handleApiPoll);
         srv.createContext("/api/logout", this::handleApiLogout);
+        srv.createContext("/api/offline", this::handleApiOffline);
 
         // Upload & Stream tệp lớn (Video / Âm thanh / Ảnh / Avatar) với HTTP Range
         srv.createContext("/api/upload", this::handleApiUpload);
@@ -121,6 +122,7 @@ public class MiniHttpServer {
 
     private class WebClientSession extends ClientSession {
         final Queue<ChatMessage> inbox = new ConcurrentLinkedQueue<>();
+        volatile long lastPollMs = System.currentTimeMillis();
         WebClientSession(int id) { super(id); }
         @Override public boolean send(ChatMessage message) {
             if (message == null) return true;
@@ -156,6 +158,7 @@ public class MiniHttpServer {
             sendJson(ex, 401, Map.of("error", "Unauthorized"));
             return null;
         }
+        ws.lastPollMs = System.currentTimeMillis();
         return ws;
     }
 
@@ -273,6 +276,13 @@ public class MiniHttpServer {
         WebClientSession ws = token != null ? webSessions.remove(token) : null;
         if (ws != null) sessionRegistry.removeSession(ws);
         dispatcher.getSocialStore().deleteWebSession(token);
+        sendJson(ex, 200, Map.of("ok", true));
+    }
+
+    private void handleApiOffline(HttpExchange ex) throws IOException {
+        String token = ex.getRequestHeaders().getFirst("X-Zalo-Token");
+        WebClientSession ws = token != null ? webSessions.remove(token) : null;
+        if (ws != null) sessionRegistry.removeSession(ws);
         sendJson(ex, 200, Map.of("ok", true));
     }
 
@@ -539,6 +549,13 @@ public class MiniHttpServer {
 
     /** [Sender / State] Gom danh sách user kèm trạng thái online/lastSeen và đường dẫn avatar */
     private List<UserInfo> buildUsersWithAvatars() {
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, WebClientSession> entry : new ArrayList<>(webSessions.entrySet())) {
+            if (now - entry.getValue().lastPollMs > 7000L) {
+                WebClientSession stale = webSessions.remove(entry.getKey());
+                if (stale != null) sessionRegistry.removeSession(stale);
+            }
+        }
         List<UserInfo> list = sessionRegistry.buildContactsList();
         for (UserInfo u : list) {
             u.setAvatarUrl(dispatcher.getSocialStore().getAvatarUrl(u.getUsername()));

@@ -58,6 +58,7 @@ public class ZaloDesktopApp {
     private final ExecutorService ioExec = Executors.newCachedThreadPool();
     private final Map<String, ImageIcon> thumbCache = new ConcurrentHashMap<>();
     private final Map<String, Path> savedLocalPaths = new ConcurrentHashMap<>();
+    private final Map<String, Long> typingMap = new ConcurrentHashMap<>();
 
     private String serverBase = System.getenv("ZALO_SERVER") != null && !System.getenv("ZALO_SERVER").isBlank()
             ? System.getenv("ZALO_SERVER").trim()
@@ -409,6 +410,7 @@ public class ZaloDesktopApp {
             @Override public void windowClosing(WindowEvent e) {
                 if (pollTimer != null) pollTimer.stop();
                 saveLocalSession();
+                try { postJson("/api/offline", new JsonObject()); } catch (Exception ignored) {}
             }
         });
 
@@ -421,7 +423,7 @@ public class ZaloDesktopApp {
         navRail.setLayout(new BoxLayout(navRail, BoxLayout.Y_AXIS));
         navRail.setBorder(new EmptyBorder(14, 10, 14, 10));
 
-        AvatarCircle meAv = new AvatarCircle(44, ZALO_DARK, myName.substring(0, 1).toUpperCase(), false);
+        AvatarCircle meAv = new AvatarCircle(44, avColor(me), initialsOf(myName), true);
         meAv.setToolTipText(myName + " (@" + me + ")");
         meAv.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -922,19 +924,25 @@ public class ZaloDesktopApp {
         if ("typing_indicator".equals(type)) {
             String fromU = m.getUsername() != null ? m.getUsername().toLowerCase() : "";
             String gid = m.getGroupId() != null ? m.getGroupId().toLowerCase() : "";
-            if (!fromU.equals(me.toLowerCase()) && (fromU.equals(curId.toLowerCase()) || gid.equals(curId.toLowerCase()))) {
-                String who = m.getDisplayName() != null ? m.getDisplayName() : m.getUsername();
-                String txt = "✍️ " + who + " đang soạn tin...";
-                lblTypingHead.setText(txt);
-                lblTypingBar.setText(txt);
-                lblTypingBar.setVisible(true);
-                if (typingClearTimer != null) typingClearTimer.stop();
-                typingClearTimer = new javax.swing.Timer(4000, ev -> {
-                    lblTypingHead.setText("");
-                    lblTypingBar.setVisible(false);
-                });
-                typingClearTimer.setRepeats(false);
-                typingClearTimer.start();
+            if (!fromU.equals(me.toLowerCase())) {
+                String convKey = !gid.isEmpty() ? gid : fromU;
+                typingMap.put(convKey, System.currentTimeMillis() + 4000L);
+                renderConvList();
+                if (fromU.equals(curId.toLowerCase()) || gid.equals(curId.toLowerCase())) {
+                    String who = m.getDisplayName() != null ? m.getDisplayName() : m.getUsername();
+                    String txt = who + " đang soạn tin...";
+                    lblTypingHead.setText("• " + txt);
+                    lblTypingBar.setText("• " + txt);
+                    lblTypingBar.setVisible(true);
+                    if (typingClearTimer != null) typingClearTimer.stop();
+                    typingClearTimer = new javax.swing.Timer(4000, ev -> {
+                        lblTypingHead.setText("");
+                        lblTypingBar.setVisible(false);
+                        renderConvList();
+                    });
+                    typingClearTimer.setRepeats(false);
+                    typingClearTimer.start();
+                }
             }
             return;
         }
@@ -1545,7 +1553,7 @@ public class ZaloDesktopApp {
             if (uname.equalsIgnoreCase(me)) continue;
             String dn = u.has("displayName") ? u.get("displayName").getAsString() : uname;
             boolean onl = u.has("online") && u.get("online").getAsBoolean();
-            addConvItemIfMatch(uname, dn, false, onl, onl ? "Đang hoạt động" : "Ngoại tuyến", q);
+            addConvItemIfMatch(uname, dn, false, onl, formatLastSeen(u), q);
         }
         convListPanel.add(Box.createVerticalGlue());
         convListPanel.revalidate();
@@ -1569,17 +1577,22 @@ public class ZaloDesktopApp {
         row.setBorder(new EmptyBorder(9, 12, 9, 12));
         row.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        AvatarCircle av = new AvatarCircle(42, "my_cloud".equals(id) ? ZALO_BLUE : avColor(name),
-                "my_cloud".equals(id) ? "☁" : name.substring(0, 1).toUpperCase(),
+        AvatarCircle av = new AvatarCircle(42, "my_cloud".equals(id) ? ZALO_BLUE : avColor(id),
+                "my_cloud".equals(id) ? "☁" : initialsOf(name),
                 online && !"my_cloud".equals(id));
 
         List<ChatMessage> arr = history.get(id);
         ChatMessage last = (arr != null && !arr.isEmpty()) ? arr.get(arr.size() - 1) : null;
         String prev = defSub;
         String time = "";
-        if (last != null) {
+        boolean isTyping = typingMap.getOrDefault(id.toLowerCase(), 0L) > System.currentTimeMillis();
+        if (isTyping) {
+            prev = "Đang soạn tin...";
+        } else if (last != null) {
             time = last.getTimestamp() != null ? last.getTimestamp() : "";
-            if (last.getIsRecalled()) prev = "Tin nhắn đã được thu hồi";
+            if (!isGrp && !online && !"my_cloud".equals(id)) {
+                prev = defSub;
+            } else if (last.getIsRecalled()) prev = "Tin nhắn đã được thu hồi";
             else if (last.getFileName() != null) {
                 String fnl = last.getFileName().toLowerCase();
                 String tag = fnl.matches(".*\\.(png|jpg|jpeg|gif|bmp|webp)$") ? "[Ảnh] "
@@ -1684,14 +1697,15 @@ public class ZaloDesktopApp {
 
         if (!isMe) {
             String sn = m.getDisplayName() != null ? m.getDisplayName() : m.getUsername();
-            line.add(new AvatarCircle(32, avColor(sn), sn.substring(0, 1).toUpperCase(), false));
+            String su = m.getUsername() != null ? m.getUsername() : sn;
+            line.add(new AvatarCircle(32, avColor(su), initialsOf(sn), false));
         }
 
         RoundedPanel bubble = new RoundedPanel(14, isMe ? BG_ME : Color.WHITE, isMe ? new Color(0xCBE0FF) : BORDER_COL);
         bubble.setLayout(new BoxLayout(bubble, BoxLayout.Y_AXIS));
         bubble.setBorder(new EmptyBorder(9, 13, 9, 13));
 
-        if (!isMe && curIsGroup) {
+        if (!isMe) {
             JLabel sender = new JLabel(m.getDisplayName() != null ? m.getDisplayName() : m.getUsername());
             sender.setFont(new Font("Segoe UI", Font.BOLD, 11));
             sender.setForeground(ZALO_BLUE);
@@ -1774,6 +1788,9 @@ public class ZaloDesktopApp {
         }
 
         line.add(bubble);
+        if (isMe) {
+            line.add(new AvatarCircle(28, avColor(me), initialsOf(myName), true));
+        }
         outer.add(line);
 
         if (isLastMine) {
@@ -2305,15 +2322,25 @@ public class ZaloDesktopApp {
         return null;
     }
 
+    private String initialsOf(String name) {
+        if (name == null || name.isBlank()) return "?";
+        String[] parts = name.trim().split("\\s+");
+        if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
+        return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
+    }
+
     private String formatLastSeen(JsonObject u) {
         if (u == null) return "Ngoại tuyến";
         if (u.has("online") && u.get("online").getAsBoolean()) return "Đang hoạt động";
-        long ts = u.has("lastSeen") ? u.get("lastSeen").getAsLong() : 0L;
+        long ts = 0L;
+        if (u.has("lastSeen") && !u.get("lastSeen").isJsonNull()) {
+            try { ts = Long.parseLong(u.get("lastSeen").getAsString().trim()); } catch (Exception ignored) {}
+        }
         if (ts <= 0) return "Ngoại tuyến";
         long diffSec = Math.max(0, (System.currentTimeMillis() - ts) / 1000);
-        if (diffSec < 60) return "Vừa mới truy cập";
-        if (diffSec < 3600) return "Hoạt động " + (diffSec / 60) + " phút trước";
-        return "Hoạt động " + (diffSec / 3600) + " giờ trước";
+        if (diffSec < 60) return "Ngoại tuyến • Vừa mới truy cập";
+        if (diffSec < 3600) return "Ngoại tuyến • Hoạt động " + (diffSec / 60) + " phút trước";
+        return "Ngoại tuyến • Hoạt động " + (diffSec / 3600) + " giờ trước";
     }
 
     private void updateTaskbarBadge(int totalUnread) {
