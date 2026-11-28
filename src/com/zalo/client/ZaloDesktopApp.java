@@ -107,12 +107,61 @@ public class ZaloDesktopApp {
             UIManager.put("ScrollBar.thumbArc", 999);
             UIManager.put("ScrollBar.width", 6);
         } catch (Exception ignored) {}
-        SwingUtilities.invokeLater(() -> new ZaloDesktopApp(args != null && args.length > 0 ? args[0] : null).showLoginWindow());
+        SwingUtilities.invokeLater(() -> new ZaloDesktopApp(args != null && args.length > 0 ? args[0] : null).tryAutoResume());
     }
 
     public ZaloDesktopApp() {}
     public ZaloDesktopApp(String cliServer) {
         if (cliServer != null && !cliServer.isBlank()) this.serverBase = cliServer.trim().replaceAll("/+$", "");
+    }
+
+    private Path sessionFile() {
+        return Path.of(System.getProperty("user.home"), ".zalo_desktop_session.json");
+    }
+
+    private void saveLocalSession() {
+        if (token == null || token.isBlank()) return;
+        try {
+            JsonObject s = new JsonObject();
+            s.addProperty("serverBase", serverBase);
+            s.addProperty("token", token);
+            s.addProperty("curId", curId);
+            s.addProperty("curName", curName);
+            s.addProperty("curIsGroup", curIsGroup);
+            Files.writeString(sessionFile(), s.toString(), StandardCharsets.UTF_8);
+        } catch (Exception ignored) {}
+    }
+
+    private void deleteLocalSession() {
+        try { Files.deleteIfExists(sessionFile()); } catch (Exception ignored) {}
+        token = null;
+    }
+
+    private void tryAutoResume() {
+        try {
+            Path f = sessionFile();
+            if (Files.isRegularFile(f)) {
+                JsonObject s = gson.fromJson(Files.readString(f, StandardCharsets.UTF_8), JsonObject.class);
+                if (s != null && s.has("token") && !s.get("token").getAsString().isBlank()) {
+                    if (s.has("serverBase") && !s.get("serverBase").getAsString().isBlank()) {
+                        serverBase = s.get("serverBase").getAsString().trim();
+                    }
+                    token = s.get("token").getAsString().trim();
+                    JsonObject res = getJson("/api/resume");
+                    if (res != null && res.has("success") && res.get("success").getAsBoolean()) {
+                        if (s.has("curId")) curId = s.get("curId").getAsString();
+                        if (s.has("curName")) curName = s.get("curName").getAsString();
+                        if (s.has("curIsGroup")) curIsGroup = s.get("curIsGroup").getAsBoolean();
+                        applySessionPayload(res);
+                        saveLocalSession();
+                        showMainWindow();
+                        return;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        token = null;
+        showLoginWindow();
     }
 
     // ==================== 1. ĐĂNG NHẬP / ĐĂNG KÝ (2 TAB GIỐNG WEB) ====================
@@ -282,6 +331,7 @@ public class ZaloDesktopApp {
                         if (res != null && res.has("success") && res.get("success").getAsBoolean()) {
                             loginFrame.dispose();
                             applySessionPayload(res);
+                            saveLocalSession();
                             showMainWindow();
                         } else {
                             lblLoginErr.setForeground(new Color(0xDC2626));
@@ -357,7 +407,7 @@ public class ZaloDesktopApp {
         mainFrame.addWindowListener(new WindowAdapter() {
             @Override public void windowClosing(WindowEvent e) {
                 if (pollTimer != null) pollTimer.stop();
-                ioExec.submit(() -> { try { postJson("/api/logout", new JsonObject()); } catch (Exception ignored) {} });
+                saveLocalSession();
             }
         });
 
@@ -384,6 +434,7 @@ public class ZaloDesktopApp {
         navCloud.addActionListener(e -> selectConv("my_cloud", "Cloud của tôi", false));
         navOut.addActionListener(e -> {
             if (pollTimer != null) pollTimer.stop();
+            deleteLocalSession();
             ioExec.submit(() -> { try { postJson("/api/logout", new JsonObject()); } catch (Exception ignored) {} });
             mainFrame.dispose();
             showLoginWindow();
@@ -969,6 +1020,7 @@ public class ZaloDesktopApp {
         renderHeaderAndDrawer();
         renderConvList();
         renderMessages();
+        saveLocalSession();
     }
 
     private void markReadAsync(String convId) {
