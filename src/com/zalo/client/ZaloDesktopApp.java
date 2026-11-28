@@ -568,16 +568,29 @@ public class ZaloDesktopApp {
             @Override public void changedUpdate(DocumentEvent e) {}
         });
 
-        btnMainSend = new JButton("👍");
-        btnMainSend.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
+        btnMainSend = new JButton(new ColorEmojiIcon("👍", 22));
         btnMainSend.setBackground(Color.WHITE);
         btnMainSend.setForeground(ZALO_BLUE);
         btnMainSend.setFocusPainted(false);
         btnMainSend.setBorderPainted(false);
+        btnMainSend.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnMainSend.addActionListener(e -> sendOrLike());
 
+        JButton btnInlineEmoji = new JButton(new VectorIcon("emoji", 18, new Color(0x64748B)));
+        btnInlineEmoji.setBackground(Color.WHITE);
+        btnInlineEmoji.setFocusPainted(false);
+        btnInlineEmoji.setBorderPainted(false);
+        btnInlineEmoji.setToolTipText("Chọn cảm xúc");
+        btnInlineEmoji.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnInlineEmoji.addActionListener(e -> showEmojiMenu(btnInlineEmoji));
+
+        JPanel sendRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
+        sendRight.setOpaque(false);
+        sendRight.add(btnInlineEmoji);
+        sendRight.add(btnMainSend);
+
         sendRow.add(txtMsg, BorderLayout.CENTER);
-        sendRow.add(btnMainSend, BorderLayout.EAST);
+        sendRow.add(sendRight, BorderLayout.EAST);
 
         inputArea.add(lblTypingBar);
         inputArea.add(sendRow);
@@ -734,8 +747,14 @@ public class ZaloDesktopApp {
 
     private void onMsgInput() {
         String val = txtMsg.getText().trim();
-        btnMainSend.setText(val.isEmpty() ? "👍" : "Gửi");
-        btnMainSend.setFont(new Font(val.isEmpty() ? "Segoe UI Emoji" : "Segoe UI", val.isEmpty() ? Font.PLAIN : Font.BOLD, val.isEmpty() ? 16 : 13));
+        if (val.isEmpty()) {
+            btnMainSend.setText("");
+            btnMainSend.setIcon(new ColorEmojiIcon("👍", 22));
+        } else {
+            btnMainSend.setIcon(null);
+            btnMainSend.setText("Gửi");
+            btnMainSend.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        }
         if (!val.isEmpty() && token != null && !"my_cloud".equals(curId)) {
             long now = System.currentTimeMillis();
             if (now - lastTypingSentMs > 1000) {
@@ -998,13 +1017,37 @@ public class ZaloDesktopApp {
     }
 
     private void showEmojiMenu(Component anchor) {
-        String[] emojis = {"😀", "😂", "😍", "🥰", "😎", "😭", "👍", "❤️", "🔥", "🎉", "👏", "💯"};
+        String[] emojis = {
+                "😀", "😂", "😍", "🥰", "😎", "😭", "😊", "😉",
+                "😋", "🤔", "😮", "😢", "😡", "😴", "🥳", "🤩",
+                "👍", "❤️", "🔥", "🎉", "👏", "💯", "🙏", "✨"
+        };
         JPopupMenu pop = new JPopupMenu();
-        JPanel grid = new JPanel(new GridLayout(2, 6, 4, 4));
-        grid.setBorder(new EmptyBorder(6, 6, 6, 6));
+        pop.setBackground(Color.WHITE);
+        pop.setBorder(BorderFactory.createLineBorder(BORDER_COL));
+
+        JPanel box = new JPanel(new BorderLayout(0, 6));
+        box.setBackground(Color.WHITE);
+        box.setBorder(new EmptyBorder(8, 10, 10, 10));
+
+        JLabel hdr = new JLabel("Cảm xúc");
+        hdr.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        hdr.setForeground(ZALO_BLUE);
+        hdr.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 2, 0, ZALO_BLUE),
+                new EmptyBorder(0, 2, 4, 2)));
+        box.add(hdr, BorderLayout.NORTH);
+
+        JPanel grid = new JPanel(new GridLayout(3, 8, 4, 4));
+        grid.setBackground(Color.WHITE);
         for (String em : emojis) {
-            JButton b = new JButton(em);
-            b.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));
+            JButton b = new JButton(new ColorEmojiIcon(em, 24));
+            b.setToolTipText(em);
+            b.setPreferredSize(new Dimension(34, 34));
+            b.setBackground(Color.WHITE);
+            b.setBorderPainted(false);
+            b.setFocusPainted(false);
+            b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             b.addActionListener(e -> {
                 txtMsg.setText(txtMsg.getText() + em);
                 pop.setVisible(false);
@@ -1012,8 +1055,12 @@ public class ZaloDesktopApp {
             });
             grid.add(b);
         }
-        pop.add(grid);
-        pop.show(anchor, 0, -90);
+        box.add(grid, BorderLayout.CENTER);
+        pop.add(box);
+        Dimension d = pop.getPreferredSize();
+        Point loc = anchor.getLocationOnScreen();
+        int xOff = (loc.x + d.width > mainFrame.getX() + mainFrame.getWidth() - 12) ? (anchor.getWidth() - d.width) : 0;
+        pop.show(anchor, xOff, -d.height - 6);
     }
 
     private void showAttachMenu(Component anchor) {
@@ -1158,54 +1205,169 @@ public class ZaloDesktopApp {
     }
 
     private void openCreateGroupDialog() {
+        JDialog dlg = new JDialog(mainFrame, "Tạo nhóm", true);
+        dlg.setSize(430, 540);
+        dlg.setLocationRelativeTo(mainFrame);
+        dlg.setResizable(false);
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(Color.WHITE);
+
+        JPanel top = new JPanel();
+        top.setBackground(Color.WHITE);
+        top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
+        top.setBorder(new EmptyBorder(14, 18, 10, 18));
+
+        JLabel title = new JLabel("Tạo nhóm");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        top.add(title);
+        top.add(Box.createVerticalStrut(12));
+
+        JPanel nameRow = new JPanel(new BorderLayout(10, 0));
+        nameRow.setOpaque(false);
+        nameRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        nameRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        AvatarCircle camAv = new AvatarCircle(38, new Color(0xEAEDF0), "N", false);
         JTextField txtName = new JTextField();
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.add(new JLabel("Tên nhóm mới:"));
-        p.add(txtName);
-        p.add(Box.createVerticalStrut(8));
-        p.add(new JLabel("Chọn thành viên:"));
+        txtName.putClientProperty("JTextField.placeholderText", "Nhập tên nhóm...");
+        txtName.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        txtName.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, ZALO_BLUE));
+        nameRow.add(camAv, BorderLayout.WEST);
+        nameRow.add(txtName, BorderLayout.CENTER);
+        top.add(nameRow);
+        top.add(Box.createVerticalStrut(10));
+
+        JTextField txtFind = new JTextField();
+        txtFind.putClientProperty("JTextField.placeholderText", "Nhập tên hoặc @tài_khoản để tìm...");
+        txtFind.setBackground(new Color(0xF1F5F9));
+        txtFind.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        txtFind.setAlignmentX(Component.LEFT_ALIGNMENT);
+        top.add(txtFind);
+        top.add(Box.createVerticalStrut(8));
+
+        JLabel memHdr = new JLabel("Trò chuyện gần đây");
+        memHdr.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        memHdr.setForeground(TEXT_MAIN);
+        memHdr.setAlignmentX(Component.LEFT_ALIGNMENT);
+        top.add(memHdr);
+
+        JPanel listPanel = new JPanel();
+        listPanel.setBackground(Color.WHITE);
+        listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
+        listPanel.setBorder(new EmptyBorder(4, 14, 8, 14));
+
         List<JCheckBox> checks = new ArrayList<>();
+        List<JPanel> itemRows = new ArrayList<>();
         for (JsonObject u : new ArrayList<>(contacts)) {
             String uname = u.get("username").getAsString();
             if (uname.equalsIgnoreCase(me)) continue;
             String dn = u.has("displayName") ? u.get("displayName").getAsString() : uname;
-            JCheckBox cb = new JCheckBox(dn + " (@" + uname + ")");
+            JPanel row = new JPanel(new BorderLayout(10, 0));
+            row.setBackground(Color.WHITE);
+            row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48));
+            row.setBorder(new EmptyBorder(5, 4, 5, 4));
+            row.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            JCheckBox cb = new JCheckBox();
+            cb.setBackground(Color.WHITE);
             cb.putClientProperty("uname", uname);
+            cb.putClientProperty("search", (dn + " " + uname).toLowerCase());
             checks.add(cb);
-            p.add(cb);
+
+            JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            left.setOpaque(false);
+            left.add(cb);
+            left.add(new AvatarCircle(34, avColor(dn), dn.substring(0, 1).toUpperCase(), false));
+            JLabel lbl = new JLabel(dn + " (@" + uname + ")");
+            lbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            left.add(lbl);
+            row.add(left, BorderLayout.CENTER);
+            row.addMouseListener(new MouseAdapter() {
+                @Override public void mouseClicked(MouseEvent e) { cb.setSelected(!cb.isSelected()); }
+            });
+            itemRows.add(row);
+            listPanel.add(row);
         }
-        if (JOptionPane.showConfirmDialog(mainFrame, p, "Tạo nhóm chat", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
-        String gname = txtName.getText().trim();
-        if (gname.isEmpty()) return;
-        JsonArray mems = new JsonArray();
-        for (JCheckBox cb : checks) if (cb.isSelected()) mems.add((String) cb.getClientProperty("uname"));
-        ioExec.submit(() -> {
-            try {
-                JsonObject req = new JsonObject();
-                req.addProperty("groupName", gname);
-                req.add("members", mems);
-                JsonObject res = postJson("/api/groups/create", req);
-                if (res != null && res.has("ok") && res.get("ok").getAsBoolean()) {
-                    String gid = res.get("groupId").getAsString();
-                    JsonObject gObj = new JsonObject();
-                    gObj.addProperty("id", gid);
-                    gObj.addProperty("name", gname);
-                    JsonArray allMems = mems.deepCopy();
-                    allMems.add(me);
-                    gObj.add("members", allMems);
-                    SwingUtilities.invokeLater(() -> {
-                        groups.add(gObj);
-                        selectConv(gid, gname, true);
-                    });
-                } else {
-                    String err = (res != null && res.has("error")) ? res.get("error").getAsString() : "Không tạo được nhóm";
-                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainFrame, err));
+        listPanel.add(Box.createVerticalGlue());
+
+        txtFind.getDocument().addDocumentListener(new DocumentListener() {
+            void filter() {
+                String q = txtFind.getText().trim().toLowerCase();
+                for (int i = 0; i < checks.size(); i++) {
+                    String s = (String) checks.get(i).getClientProperty("search");
+                    itemRows.get(i).setVisible(q.isEmpty() || s.contains(q));
                 }
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainFrame, "Lỗi tạo nhóm: " + ex.getMessage()));
+                listPanel.revalidate();
+                listPanel.repaint();
             }
+            @Override public void insertUpdate(DocumentEvent e) { filter(); }
+            @Override public void removeUpdate(DocumentEvent e) { filter(); }
+            @Override public void changedUpdate(DocumentEvent e) {}
         });
+
+        JScrollPane scroll = new JScrollPane(listPanel);
+        scroll.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 0, BORDER_COL));
+        scroll.getVerticalScrollBar().setUnitIncrement(14);
+
+        JPanel foot = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        foot.setBackground(Color.WHITE);
+        JButton btnCancel = new JButton("Hủy");
+        btnCancel.setBackground(new Color(0xEAEDF0));
+        btnCancel.setPreferredSize(new Dimension(80, 34));
+        btnCancel.addActionListener(e -> dlg.dispose());
+
+        JButton btnOk = new JButton("Tạo nhóm");
+        btnOk.setBackground(ZALO_BLUE);
+        btnOk.setForeground(Color.WHITE);
+        btnOk.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnOk.setPreferredSize(new Dimension(106, 34));
+        btnOk.addActionListener(e -> {
+            String gname = txtName.getText().trim();
+            if (gname.isEmpty()) {
+                JOptionPane.showMessageDialog(dlg, "Vui lòng nhập tên nhóm!");
+                txtName.requestFocus();
+                return;
+            }
+            btnOk.setEnabled(false);
+            JsonArray mems = new JsonArray();
+            for (JCheckBox cb : checks) if (cb.isSelected()) mems.add((String) cb.getClientProperty("uname"));
+            ioExec.submit(() -> {
+                try {
+                    JsonObject req = new JsonObject();
+                    req.addProperty("groupName", gname);
+                    req.add("members", mems);
+                    JsonObject res = postJson("/api/groups/create", req);
+                    if (res != null && res.has("ok") && res.get("ok").getAsBoolean()) {
+                        String gid = res.get("groupId").getAsString();
+                        JsonObject gObj = new JsonObject();
+                        gObj.addProperty("id", gid);
+                        gObj.addProperty("name", gname);
+                        JsonArray allMems = mems.deepCopy();
+                        allMems.add(me);
+                        gObj.add("members", allMems);
+                        SwingUtilities.invokeLater(() -> {
+                            groups.add(gObj);
+                            dlg.dispose();
+                            selectConv(gid, gname, true);
+                        });
+                    } else {
+                        String err = (res != null && res.has("error")) ? res.get("error").getAsString() : "Không tạo được nhóm";
+                        SwingUtilities.invokeLater(() -> { btnOk.setEnabled(true); JOptionPane.showMessageDialog(dlg, err); });
+                    }
+                } catch (Exception ex) {
+                    SwingUtilities.invokeLater(() -> { btnOk.setEnabled(true); JOptionPane.showMessageDialog(dlg, "Lỗi tạo nhóm: " + ex.getMessage()); });
+                }
+            });
+        });
+
+        foot.add(btnCancel);
+        foot.add(btnOk);
+
+        root.add(top, BorderLayout.NORTH);
+        root.add(scroll, BorderLayout.CENTER);
+        root.add(foot, BorderLayout.SOUTH);
+        dlg.setContentPane(root);
+        dlg.setVisible(true);
     }
 
     // ==================== 5. VẼ HEADER, DRAWER, DANH SÁCH & TIN NHẮN ====================
@@ -2194,6 +2356,111 @@ public class ZaloDesktopApp {
                 }
                 case "check" -> {
                     g2.drawPolyline(new int[]{2, s / 2 - 1, s - 2}, new int[]{s / 2, s - 3, 3}, 3);
+                }
+            }
+            g2.dispose();
+        }
+    }
+
+    private static class ColorEmojiIcon implements Icon {
+        private final String em;
+        private final int sz;
+
+        ColorEmojiIcon(String em, int sz) { this.em = em; this.sz = sz; }
+        @Override public int getIconWidth() { return sz; }
+        @Override public int getIconHeight() { return sz; }
+
+        @Override public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.translate(x, y);
+            int s = sz;
+            switch (em) {
+                case "👍" -> {
+                    g2.setColor(new Color(0xFBBF24));
+                    g2.fillRoundRect(s / 3, s / 2 - 1, s / 2 + 1, s / 2 - 1, 4, 4);
+                    g2.fillRoundRect(s / 2 - 2, 3, 5, s / 2, 4, 4);
+                    g2.setColor(new Color(0x2563EB));
+                    g2.fillRoundRect(2, s / 2, s / 4 + 1, s / 2 - 2, 3, 3);
+                }
+                case "❤️" -> {
+                    g2.setColor(new Color(0xEF4444));
+                    g2.fillOval(2, 3, s / 2 - 1, s / 2 - 1);
+                    g2.fillOval(s / 2 - 1, 3, s / 2 - 1, s / 2 - 1);
+                    g2.fillPolygon(new int[]{2, s - 2, s / 2}, new int[]{s / 2 - 1, s / 2 - 1, s - 2}, 3);
+                }
+                case "🔥" -> {
+                    g2.setColor(new Color(0xF97316));
+                    g2.fillOval(3, 5, s - 6, s - 7);
+                    g2.fillPolygon(new int[]{4, s / 2, s - 4}, new int[]{s / 2, 1, s / 2}, 3);
+                    g2.setColor(new Color(0xFACC15));
+                    g2.fillOval(s / 4, s / 2 - 1, s / 2, s / 2 - 1);
+                }
+                case "🎉" -> {
+                    g2.setColor(new Color(0xF59E0B));
+                    g2.fillPolygon(new int[]{3, s - 5, s / 2 - 2}, new int[]{s - 3, s / 2 - 1, 4}, 3);
+                    g2.setColor(new Color(0xEC4899));
+                    g2.fillOval(s - 7, 3, 4, 4);
+                    g2.setColor(new Color(0x3B82F6));
+                    g2.fillOval(s / 2, 2, 4, 4);
+                }
+                case "👏" -> {
+                    g2.setColor(new Color(0xFBBF24));
+                    g2.fillRoundRect(3, 5, s / 2, s - 8, 5, 5);
+                    g2.fillRoundRect(s / 2 - 2, 4, s / 2, s - 7, 5, 5);
+                    g2.setColor(new Color(0xEA580C));
+                    g2.drawLine(3, 2, 5, 4);
+                    g2.drawLine(s - 3, 2, s - 5, 4);
+                }
+                case "💯" -> {
+                    g2.setColor(new Color(0xDC2626));
+                    g2.setFont(new Font("Segoe UI", Font.BOLD, Math.max(9, s / 2)));
+                    g2.drawString("100", 1, s * 2 / 3);
+                    g2.fillRect(2, s - 5, s - 4, 2);
+                }
+                case "🙏" -> {
+                    g2.setColor(new Color(0xFBBF24));
+                    g2.fillPolygon(new int[]{s / 2, 4, s / 2 - 1}, new int[]{3, s - 3, s - 3}, 3);
+                    g2.fillPolygon(new int[]{s / 2, s - 4, s / 2 + 1}, new int[]{3, s - 3, s - 3}, 3);
+                }
+                case "✨" -> {
+                    g2.setColor(new Color(0xFACC15));
+                    g2.fillPolygon(new int[]{s / 2, s / 2 + 3, s - 2, s / 2 + 3, s / 2, s / 2 - 3, 2, s / 2 - 3},
+                            new int[]{2, s / 2 - 3, s / 2, s / 2 + 3, s - 2, s / 2 + 3, s / 2, s / 2 - 3}, 8);
+                }
+                default -> {
+                    Color face = "😡".equals(em) ? new Color(0xEF4444) : new Color(0xFACC15);
+                    g2.setColor(face);
+                    g2.fillOval(2, 2, s - 4, s - 4);
+                    g2.setColor(new Color(0xCA8A04));
+                    g2.drawOval(2, 2, s - 4, s - 4);
+                    g2.setColor(new Color(0x1E293B));
+                    int ey = s * 2 / 5;
+                    if ("😍".equals(em) || "🥰".equals(em)) {
+                        g2.setColor(new Color(0xEF4444));
+                        g2.fillOval(s / 4, ey - 2, 5, 5);
+                        g2.fillOval(s * 3 / 4 - 5, ey - 2, 5, 5);
+                    } else if ("😎".equals(em)) {
+                        g2.fillRoundRect(s / 5, ey - 2, s / 4 + 2, 5, 2, 2);
+                        g2.fillRoundRect(s / 2 + 1, ey - 2, s / 4 + 2, 5, 2, 2);
+                        g2.drawLine(s / 2 - 2, ey, s / 2 + 2, ey);
+                    } else {
+                        g2.fillOval(s / 3 - 2, ey - 2, 3, 3);
+                        g2.fillOval(s * 2 / 3 - 1, ey - 2, 3, 3);
+                    }
+                    if ("😭".equals(em) || "😢".equals(em)) {
+                        g2.setColor(new Color(0x38BDF8));
+                        g2.fillRect(s / 3 - 2, ey + 2, 3, s / 3);
+                        g2.fillRect(s * 2 / 3 - 1, ey + 2, 3, s / 3);
+                        g2.setColor(new Color(0x1E293B));
+                        g2.drawArc(s / 3, s * 2 / 3, s / 3, s / 5, 0, 180);
+                    } else if ("😮".equals(em)) {
+                        g2.fillOval(s / 2 - 3, s * 3 / 5, 6, 6);
+                    } else if ("😡".equals(em)) {
+                        g2.drawArc(s / 3, s * 2 / 3, s / 3, s / 5, 0, 180);
+                    } else {
+                        g2.drawArc(s / 4 + 1, s / 2, s / 2 - 2, s / 3 - 1, 190, 160);
+                    }
                 }
             }
             g2.dispose();
