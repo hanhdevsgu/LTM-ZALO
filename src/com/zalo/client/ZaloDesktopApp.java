@@ -57,6 +57,7 @@ public class ZaloDesktopApp {
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     private final ExecutorService ioExec = Executors.newCachedThreadPool();
     private final Map<String, ImageIcon> thumbCache = new ConcurrentHashMap<>();
+    private final Map<String, Path> savedLocalPaths = new ConcurrentHashMap<>();
 
     private String serverBase = System.getenv("ZALO_SERVER") != null && !System.getenv("ZALO_SERVER").isBlank()
             ? System.getenv("ZALO_SERVER").trim()
@@ -1759,8 +1760,8 @@ public class ZaloDesktopApp {
             }
             if ("file_transfer".equals(m.getType()) && m.getFileData() != null && m.getFileName() != null) {
                 ctx.addSeparator();
-                JMenuItem saveIt = new JMenuItem("Tải về máy (Downloads\\ZaloFiles)");
-                saveIt.addActionListener(e -> openInZaloFilesFolder(m.getFileData(), m.getFileName()));
+                JMenuItem saveIt = new JMenuItem("Tải xuống (Save As)...");
+                saveIt.addActionListener(e -> saveAsFile(m.getFileData(), m.getFileName()));
                 ctx.add(saveIt);
             }
             if (isMe) {
@@ -1962,8 +1963,8 @@ public class ZaloDesktopApp {
         JButton openBtn = new JButton(new VectorIcon("download", 15, new Color(0x475569)));
         openBtn.setPreferredSize(new Dimension(30, 30));
         openBtn.setBackground(Color.WHITE);
-        openBtn.setToolTipText("Mở tệp");
-        openBtn.addActionListener(e -> playOrOpenFile(url, m.getFileName(), false));
+        openBtn.setToolTipText("Tải xuống (Save As)");
+        openBtn.addActionListener(e -> saveAsFile(url, m.getFileName()));
         btns.add(folderBtn);
         btns.add(openBtn);
 
@@ -2005,8 +2006,8 @@ public class ZaloDesktopApp {
         JButton dlBtn = new JButton(new VectorIcon("download", 14, new Color(0x475569)));
         dlBtn.setPreferredSize(new Dimension(28, 28));
         dlBtn.setBackground(Color.WHITE);
-        dlBtn.setToolTipText("Tải về máy");
-        dlBtn.addActionListener(e -> openInZaloFilesFolder(url, m.getFileName()));
+        dlBtn.setToolTipText("Tải xuống (Save As)");
+        dlBtn.addActionListener(e -> saveAsFile(url, m.getFileName()));
         btns.add(folderBtn);
         btns.add(dlBtn);
 
@@ -2068,9 +2069,34 @@ public class ZaloDesktopApp {
         });
     }
 
+    private void saveAsFile(String url, String fileName) {
+        FileDialog fd = new FileDialog(mainFrame, "Save As", FileDialog.SAVE);
+        fd.setFile(fileName);
+        fd.setVisible(true);
+        String dir = fd.getDirectory();
+        String chosen = fd.getFile();
+        if (dir == null || chosen == null) return;
+        Path target = Path.of(dir, chosen);
+        ioExec.submit(() -> {
+            try {
+                byte[] data = downloadBytes(url);
+                Files.write(target, data);
+                savedLocalPaths.put(url, target);
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainFrame, "Đã lưu tệp tại:\n" + target));
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainFrame, "Lỗi tải tệp: " + ex.getMessage()));
+            }
+        });
+    }
+
     private void openInZaloFilesFolder(String url, String fileName) {
         ioExec.submit(() -> {
             try {
+                Path prev = savedLocalPaths.get(url);
+                if (prev != null && Files.exists(prev)) {
+                    new ProcessBuilder("explorer.exe", "/select," + prev.toAbsolutePath()).start();
+                    return;
+                }
                 byte[] data = downloadBytes(url);
                 Path baseDir = Path.of(System.getProperty("user.home"), "Downloads", "ZaloFiles");
                 Files.createDirectories(baseDir);
@@ -2091,10 +2117,12 @@ public class ZaloDesktopApp {
                             }
                         }
                     }
+                    savedLocalPaths.put(url, outDir);
                     Desktop.getDesktop().open(outDir.toFile());
                 } else {
                     Path out = baseDir.resolve(safeName);
                     if (!Files.exists(out)) Files.write(out, data);
+                    savedLocalPaths.put(url, out);
                     new ProcessBuilder("explorer.exe", "/select," + out.toAbsolutePath()).start();
                 }
             } catch (Exception ex) {
