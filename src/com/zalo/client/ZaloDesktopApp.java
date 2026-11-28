@@ -111,7 +111,7 @@ public class ZaloDesktopApp {
             UIManager.put("ScrollBar.thumbArc", 999);
             UIManager.put("ScrollBar.width", 6);
         } catch (Exception ignored) {}
-        SwingUtilities.invokeLater(() -> new ZaloDesktopApp(args != null && args.length > 0 ? args[0] : null).tryAutoResume());
+        new ZaloDesktopApp(args != null && args.length > 0 ? args[0] : null).tryAutoResume();
     }
 
     public ZaloDesktopApp() {}
@@ -142,30 +142,34 @@ public class ZaloDesktopApp {
     }
 
     private void tryAutoResume() {
-        try {
-            Path f = sessionFile();
-            if (Files.isRegularFile(f)) {
-                JsonObject s = gson.fromJson(Files.readString(f, StandardCharsets.UTF_8), JsonObject.class);
-                if (s != null && s.has("token") && !s.get("token").getAsString().isBlank()) {
-                    if (s.has("serverBase") && !s.get("serverBase").getAsString().isBlank()) {
-                        serverBase = s.get("serverBase").getAsString().trim();
-                    }
-                    token = s.get("token").getAsString().trim();
-                    JsonObject res = getJson("/api/resume");
-                    if (res != null && res.has("success") && res.get("success").getAsBoolean()) {
-                        if (s.has("curId")) curId = s.get("curId").getAsString();
-                        if (s.has("curName")) curName = s.get("curName").getAsString();
-                        if (s.has("curIsGroup")) curIsGroup = s.get("curIsGroup").getAsBoolean();
-                        applySessionPayload(res);
-                        saveLocalSession();
-                        showMainWindow();
-                        return;
+        ioExec.submit(() -> {
+            try {
+                Path f = sessionFile();
+                if (Files.isRegularFile(f)) {
+                    JsonObject s = gson.fromJson(Files.readString(f, StandardCharsets.UTF_8), JsonObject.class);
+                    if (s != null && s.has("token") && !s.get("token").getAsString().isBlank()) {
+                        if (s.has("serverBase") && !s.get("serverBase").getAsString().isBlank()) {
+                            serverBase = s.get("serverBase").getAsString().trim();
+                        }
+                        token = s.get("token").getAsString().trim();
+                        JsonObject res = getJson("/api/resume");
+                        if (res != null && res.has("success") && res.get("success").getAsBoolean()) {
+                            if (s.has("curId")) curId = s.get("curId").getAsString();
+                            if (s.has("curName")) curName = s.get("curName").getAsString();
+                            if (s.has("curIsGroup")) curIsGroup = s.get("curIsGroup").getAsBoolean();
+                            SwingUtilities.invokeLater(() -> {
+                                applySessionPayload(res);
+                                saveLocalSession();
+                                showMainWindow();
+                            });
+                            return;
+                        }
                     }
                 }
-            }
-        } catch (Exception ignored) {}
-        token = null;
-        showLoginWindow();
+            } catch (Exception ignored) {}
+            token = null;
+            SwingUtilities.invokeLater(this::showLoginWindow);
+        });
     }
 
     // ==================== 1. ĐĂNG NHẬP / ĐĂNG KÝ (2 TAB GIỐNG WEB) ====================
@@ -2367,6 +2371,7 @@ public class ZaloDesktopApp {
     private JsonObject postJson(String path, JsonObject body) throws Exception {
         HttpRequest.Builder b = HttpRequest.newBuilder()
                 .uri(URI.create(serverBase + path))
+                .timeout(Duration.ofSeconds(6))
                 .header("Content-Type", "application/json; charset=utf-8")
                 .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8));
         if (token != null) b.header("X-Zalo-Token", token);
@@ -2375,7 +2380,10 @@ public class ZaloDesktopApp {
     }
 
     private JsonObject getJson(String path) throws Exception {
-        HttpRequest.Builder b = HttpRequest.newBuilder().uri(URI.create(serverBase + path)).GET();
+        HttpRequest.Builder b = HttpRequest.newBuilder()
+                .uri(URI.create(serverBase + path))
+                .timeout(Duration.ofSeconds(5))
+                .GET();
         if (token != null) b.header("X-Zalo-Token", token);
         HttpResponse<String> r = http.send(b.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         return r.statusCode() == 200 ? gson.fromJson(r.body(), JsonObject.class) : null;
