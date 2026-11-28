@@ -1482,11 +1482,7 @@ public class ZaloDesktopApp {
                 });
                 bubble.add(imgLbl);
             } else if (fn.matches(".*\\.(wav|mp3|ogg|m4a|webm)$")) {
-                JButton playBtn = new JButton("▶ Nghe thoại: " + m.getFileName());
-                playBtn.setBackground(new Color(0xF1F5F9));
-                playBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-                playBtn.addActionListener(e -> playOrOpenFile(url, m.getFileName(), fn.endsWith(".wav")));
-                bubble.add(playBtn);
+                bubble.add(buildVoiceCard(m, url, fn));
             } else if (fn.matches(".*\\.(mp4|mov|mkv)$")) {
                 bubble.add(buildVideoCard(m, url));
             } else {
@@ -1520,6 +1516,12 @@ public class ZaloDesktopApp {
                 JMenuItem it = new JMenuItem("Thả " + em);
                 it.addActionListener(e -> reactMessage(m.getMessageId(), em));
                 ctx.add(it);
+            }
+            if ("file_transfer".equals(m.getType()) && m.getFileData() != null && m.getFileName() != null) {
+                ctx.addSeparator();
+                JMenuItem saveIt = new JMenuItem("Tải về máy (Downloads\\ZaloFiles)");
+                saveIt.addActionListener(e -> openInZaloFilesFolder(m.getFileData(), m.getFileName()));
+                ctx.add(saveIt);
             }
             if (isMe) {
                 ctx.addSeparator();
@@ -1733,6 +1735,46 @@ public class ZaloDesktopApp {
         return card;
     }
 
+    private JPanel buildVoiceCard(ChatMessage m, String url, String fnLower) {
+        JPanel card = new JPanel(new BorderLayout(10, 0));
+        card.setOpaque(false);
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(320, 48));
+
+        JButton playBtn = new JButton(new VectorIcon("play", 28, Color.WHITE));
+        playBtn.setPreferredSize(new Dimension(34, 34));
+        playBtn.setContentAreaFilled(false);
+        playBtn.setBorderPainted(false);
+        playBtn.setFocusPainted(false);
+        playBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        playBtn.setToolTipText("Phát tin nhắn thoại");
+        playBtn.addActionListener(e -> playOrOpenFile(url, m.getFileName(), fnLower.endsWith(".wav")));
+
+        JLabel info = new JLabel("<html><b>Tin nhắn thoại</b><br><span style='color:#64748b;font-size:11px'>" + formatFileSize(m.getFileSize()) + " • " + escapeHtml(m.getFileName()) + "</span></html>");
+        info.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 4));
+        btns.setOpaque(false);
+        JButton folderBtn = new JButton(new VectorIcon("folder", 14, new Color(0x475569)));
+        folderBtn.setPreferredSize(new Dimension(28, 28));
+        folderBtn.setBackground(Color.WHITE);
+        folderBtn.setToolTipText("Lưu & mở thư mục");
+        folderBtn.addActionListener(e -> openInZaloFilesFolder(url, m.getFileName()));
+
+        JButton dlBtn = new JButton(new VectorIcon("download", 14, new Color(0x475569)));
+        dlBtn.setPreferredSize(new Dimension(28, 28));
+        dlBtn.setBackground(Color.WHITE);
+        dlBtn.setToolTipText("Tải về máy");
+        dlBtn.addActionListener(e -> openInZaloFilesFolder(url, m.getFileName()));
+        btns.add(folderBtn);
+        btns.add(dlBtn);
+
+        card.add(playBtn, BorderLayout.WEST);
+        card.add(info, BorderLayout.CENTER);
+        card.add(btns, BorderLayout.EAST);
+        return card;
+    }
+
     private JPanel buildVideoCard(ChatMessage m, String url) {
         JPanel wrap = new JPanel();
         wrap.setOpaque(false);
@@ -1740,27 +1782,40 @@ public class ZaloDesktopApp {
         wrap.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         RoundedPanel screen = new RoundedPanel(10, new Color(0x0F172A), new Color(0x334155));
-        screen.setPreferredSize(new Dimension(250, 142));
-        screen.setMaximumSize(new Dimension(250, 142));
+        screen.setPreferredSize(new Dimension(270, 150));
+        screen.setMaximumSize(new Dimension(270, 150));
         screen.setLayout(new BorderLayout());
         screen.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         screen.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton playCenter = new JButton(new VectorIcon("play", 28, Color.WHITE));
+        JButton playCenter = new JButton(new VectorIcon("play", 32, Color.WHITE));
         playCenter.setContentAreaFilled(false);
         playCenter.setBorderPainted(false);
         playCenter.setFocusPainted(false);
         playCenter.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         playCenter.addActionListener(e -> openVideoPlayer(url, m.getFileName()));
 
-        String disp = m.getFileName().length() > 28 ? m.getFileName().substring(0, 25) + "..." : m.getFileName();
-        JLabel cap = new JLabel("  " + disp + " • " + formatFileSize(m.getFileSize()));
+        JPanel botBar = new JPanel(new BorderLayout(6, 0));
+        botBar.setOpaque(false);
+        botBar.setBorder(new EmptyBorder(4, 10, 6, 8));
+        String disp = m.getFileName().length() > 24 ? m.getFileName().substring(0, 21) + "..." : m.getFileName();
+        JLabel cap = new JLabel(disp + " • " + formatFileSize(m.getFileSize()));
         cap.setForeground(new Color(0xE2E8F0));
         cap.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        cap.setBorder(new EmptyBorder(4, 6, 6, 6));
+
+        JButton dlVid = new JButton(new VectorIcon("download", 14, Color.WHITE));
+        dlVid.setContentAreaFilled(false);
+        dlVid.setBorderPainted(false);
+        dlVid.setFocusPainted(false);
+        dlVid.setToolTipText("Tải video về máy");
+        dlVid.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        dlVid.addActionListener(e -> openInZaloFilesFolder(url, m.getFileName()));
+
+        botBar.add(cap, BorderLayout.CENTER);
+        botBar.add(dlVid, BorderLayout.EAST);
 
         screen.add(playCenter, BorderLayout.CENTER);
-        screen.add(cap, BorderLayout.SOUTH);
+        screen.add(botBar, BorderLayout.SOUTH);
         screen.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) { openVideoPlayer(url, m.getFileName()); }
         });
