@@ -271,18 +271,32 @@ public class MiniHttpServer {
         sendJson(ex, 200, out);
     }
 
+    private void detachWebSession(String token) {
+        if (token == null) return;
+        WebClientSession stale = webSessions.remove(token);
+        if (stale == null) return;
+        String u = stale.getUsername();
+        if (u != null) {
+            for (WebClientSession other : webSessions.values()) {
+                if (u.equalsIgnoreCase(other.getUsername())) {
+                    sessionRegistry.bindAuthenticatedUser(other, u, other.getDisplayName());
+                    return;
+                }
+            }
+        }
+        sessionRegistry.removeSession(stale);
+    }
+
     private void handleApiLogout(HttpExchange ex) throws IOException {
         String token = ex.getRequestHeaders().getFirst("X-Zalo-Token");
-        WebClientSession ws = token != null ? webSessions.remove(token) : null;
-        if (ws != null) sessionRegistry.removeSession(ws);
+        detachWebSession(token);
         dispatcher.getSocialStore().deleteWebSession(token);
         sendJson(ex, 200, Map.of("ok", true));
     }
 
     private void handleApiOffline(HttpExchange ex) throws IOException {
         String token = ex.getRequestHeaders().getFirst("X-Zalo-Token");
-        WebClientSession ws = token != null ? webSessions.remove(token) : null;
-        if (ws != null) sessionRegistry.removeSession(ws);
+        detachWebSession(token);
         sendJson(ex, 200, Map.of("ok", true));
     }
 
@@ -551,9 +565,8 @@ public class MiniHttpServer {
     private List<UserInfo> buildUsersWithAvatars() {
         long now = System.currentTimeMillis();
         for (Map.Entry<String, WebClientSession> entry : new ArrayList<>(webSessions.entrySet())) {
-            if (now - entry.getValue().lastPollMs > 7000L) {
-                WebClientSession stale = webSessions.remove(entry.getKey());
-                if (stale != null) sessionRegistry.removeSession(stale);
+            if (now - entry.getValue().lastPollMs > 15000L) {
+                detachWebSession(entry.getKey());
             }
         }
         List<UserInfo> list = sessionRegistry.buildContactsList();
