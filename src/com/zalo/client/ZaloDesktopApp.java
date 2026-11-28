@@ -610,7 +610,7 @@ public class ZaloDesktopApp {
         sendRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         txtMsg = new JTextField();
         txtMsg.putClientProperty("JTextField.placeholderText", "Nhập @, tin nhắn...");
-        txtMsg.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        txtMsg.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         txtMsg.setBorder(new EmptyBorder(6, 6, 6, 6));
         txtMsg.addActionListener(e -> sendOrLike());
         txtMsg.getDocument().addDocumentListener(new DocumentListener() {
@@ -1705,11 +1705,14 @@ public class ZaloDesktopApp {
             if (fn.matches(".*\\.(png|jpg|jpeg|gif|bmp|webp)$")) {
                 JLabel imgLbl = new JLabel("Đang tải ảnh: " + m.getFileName());
                 imgLbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                imgLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
                 loadThumbAsync(url, imgLbl);
                 imgLbl.addMouseListener(new MouseAdapter() {
                     @Override public void mouseClicked(MouseEvent e) { openImageDialog(url, m.getFileName()); }
                 });
                 bubble.add(imgLbl);
+                bubble.add(Box.createVerticalStrut(8));
+                bubble.add(buildFileCard(m, url, fn));
             } else if (fn.matches(".*\\.(wav|mp3|ogg|m4a|webm)$")) {
                 bubble.add(buildVoiceCard(m, url, fn));
             } else if (fn.matches(".*\\.(mp4|mov|mkv)$")) {
@@ -1718,10 +1721,18 @@ public class ZaloDesktopApp {
                 bubble.add(buildFileCard(m, url, fn));
             }
         } else {
-            JLabel txt = new JLabel("<html><body style='max-width:340px'>" + escapeHtml(m.getContent() != null ? m.getContent() : "") + "</body></html>");
-            txt.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
-            txt.setForeground(m.getIsRecalled() ? MUTED : TEXT_MAIN);
-            bubble.add(txt);
+            String raw = m.getContent() != null ? m.getContent().trim() : "";
+            if (!m.getIsRecalled() && isSupportedColorEmoji(raw)) {
+                JLabel emLbl = new JLabel(new ColorEmojiIcon(raw, 34));
+                emLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+                bubble.add(emLbl);
+            } else {
+                JLabel txt = new JLabel("<html><body style='max-width:340px'>" + escapeHtml(m.getContent() != null ? m.getContent() : "") + "</body></html>");
+                txt.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+                txt.setForeground(m.getIsRecalled() ? MUTED : TEXT_MAIN);
+                txt.setAlignmentX(Component.LEFT_ALIGNMENT);
+                bubble.add(txt);
+            }
         }
 
         StringBuilder meta = new StringBuilder(m.getTimestamp() != null ? m.getTimestamp() : "");
@@ -1911,6 +1922,7 @@ public class ZaloDesktopApp {
         else if (fnLower.endsWith(".xls") || fnLower.endsWith(".xlsx")) { ext = "XLS"; bg = new Color(0x16A34A); }
         else if (fnLower.endsWith(".zip") || fnLower.endsWith(".rar") || fnLower.endsWith(".7z")) { ext = "ZIP"; bg = new Color(0xD97706); }
         else if (fnLower.endsWith(".mp4") || fnLower.endsWith(".mov") || fnLower.endsWith(".mkv")) { ext = "MP4"; bg = new Color(0x7C3AED); }
+        else if (fnLower.matches(".*\\.(png|jpg|jpeg|gif|bmp|webp)$")) { ext = "IMG"; bg = new Color(0x14B8A6); }
         JLabel badge = new JLabel(ext, SwingConstants.CENTER);
         badge.setOpaque(true);
         badge.setBackground(bg);
@@ -2301,6 +2313,15 @@ public class ZaloDesktopApp {
         }
         g2.dispose();
         return img;
+    }
+
+    private static boolean isSupportedColorEmoji(String s) {
+        return switch (s) {
+            case "😀", "😂", "😍", "🥰", "😎", "😭", "😊", "😉",
+                 "😋", "🤔", "😮", "😢", "😡", "😴", "🥳", "🤩",
+                 "👍", "❤️", "🔥", "🎉", "👏", "💯", "🙏", "✨" -> true;
+            default -> false;
+        };
     }
 
     private String escapeHtml(String s) {
