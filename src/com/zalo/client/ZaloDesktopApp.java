@@ -1797,44 +1797,27 @@ public class ZaloDesktopApp {
         wrap.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         RoundedPanel screen = new RoundedPanel(10, new Color(0x0F172A), new Color(0x334155));
-        screen.setPreferredSize(new Dimension(270, 150));
-        screen.setMaximumSize(new Dimension(270, 150));
+        screen.setPreferredSize(new Dimension(296, 156));
+        screen.setMaximumSize(new Dimension(296, 156));
         screen.setLayout(new BorderLayout());
         screen.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         screen.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton playCenter = new JButton(new VectorIcon("play", 32, Color.WHITE));
+        JButton playCenter = new JButton(new VectorIcon("play", 36, Color.WHITE));
         playCenter.setContentAreaFilled(false);
         playCenter.setBorderPainted(false);
         playCenter.setFocusPainted(false);
         playCenter.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         playCenter.addActionListener(e -> openVideoPlayer(url, m.getFileName()));
 
-        JPanel botBar = new JPanel(new BorderLayout(6, 0));
-        botBar.setOpaque(false);
-        botBar.setBorder(new EmptyBorder(4, 10, 6, 8));
-        String disp = m.getFileName().length() > 24 ? m.getFileName().substring(0, 21) + "..." : m.getFileName();
-        JLabel cap = new JLabel(disp + " • " + formatFileSize(m.getFileSize()));
-        cap.setForeground(new Color(0xE2E8F0));
-        cap.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-
-        JButton dlVid = new JButton(new VectorIcon("download", 14, Color.WHITE));
-        dlVid.setContentAreaFilled(false);
-        dlVid.setBorderPainted(false);
-        dlVid.setFocusPainted(false);
-        dlVid.setToolTipText("Tải video về máy");
-        dlVid.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        dlVid.addActionListener(e -> openInZaloFilesFolder(url, m.getFileName()));
-
-        botBar.add(cap, BorderLayout.CENTER);
-        botBar.add(dlVid, BorderLayout.EAST);
-
         screen.add(playCenter, BorderLayout.CENTER);
-        screen.add(botBar, BorderLayout.SOUTH);
         screen.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) { openVideoPlayer(url, m.getFileName()); }
         });
         wrap.add(screen);
+        wrap.add(Box.createVerticalStrut(8));
+        String fnLower = m.getFileName() != null ? m.getFileName().toLowerCase() : "video.mp4";
+        wrap.add(buildFileCard(m, url, fnLower));
         return wrap;
     }
 
@@ -1885,7 +1868,7 @@ public class ZaloDesktopApp {
                     Desktop.getDesktop().open(outDir.toFile());
                 } else {
                     Path out = baseDir.resolve(safeName);
-                    Files.write(out, data);
+                    if (!Files.exists(out)) Files.write(out, data);
                     new ProcessBuilder("explorer.exe", "/select," + out.toAbsolutePath()).start();
                 }
             } catch (Exception ex) {
