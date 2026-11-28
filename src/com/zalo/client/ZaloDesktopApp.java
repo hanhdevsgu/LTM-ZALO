@@ -1696,9 +1696,9 @@ public class ZaloDesktopApp {
         JPanel line = new JPanel(new FlowLayout(isMe ? FlowLayout.RIGHT : FlowLayout.LEFT, 8, 0));
         line.setOpaque(false);
 
+        String sn = resolveSenderName(m);
+        String su = m.getUsername() != null ? m.getUsername() : sn;
         if (!isMe) {
-            String sn = m.getDisplayName() != null ? m.getDisplayName() : m.getUsername();
-            String su = m.getUsername() != null ? m.getUsername() : sn;
             line.add(new AvatarCircle(32, avColor(su), initialsOf(sn), false));
         }
 
@@ -1707,9 +1707,9 @@ public class ZaloDesktopApp {
         bubble.setBorder(new EmptyBorder(9, 13, 9, 13));
 
         if (!isMe) {
-            JLabel sender = new JLabel(m.getDisplayName() != null ? m.getDisplayName() : m.getUsername());
+            JLabel sender = new JLabel(sn);
             sender.setFont(new Font("Segoe UI", Font.BOLD, 11));
-            sender.setForeground(ZALO_BLUE);
+            sender.setForeground(avColor(su));
             sender.setAlignmentX(Component.LEFT_ALIGNMENT);
             bubble.add(sender);
             bubble.add(Box.createVerticalStrut(3));
@@ -2372,6 +2372,20 @@ public class ZaloDesktopApp {
     private JsonObject findContact(String uname) {
         for (JsonObject u : contacts) if (uname.equalsIgnoreCase(u.get("username").getAsString())) return u;
         return null;
+    }
+
+    private String resolveSenderName(ChatMessage m) {
+        String u = m.getUsername();
+        String dn = m.getDisplayName();
+        if (dn != null && !dn.isBlank() && !dn.equalsIgnoreCase(u)) return dn;
+        if (u != null) {
+            JsonObject c = findContact(u);
+            if (c != null && c.has("displayName") && !c.get("displayName").getAsString().isBlank()) {
+                return c.get("displayName").getAsString();
+            }
+            return u;
+        }
+        return "Người dùng";
     }
 
     private String initialsOf(String name) {
