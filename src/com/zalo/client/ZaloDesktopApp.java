@@ -1610,7 +1610,7 @@ public class ZaloDesktopApp {
         lblN.setFont(new Font("Segoe UI", Font.BOLD, 13));
         lblN.setForeground(TEXT_MAIN);
         JLabel lblP = new JLabel(prev);
-        lblP.setFont(new Font("Segoe UI", unread > 0 ? Font.BOLD : Font.PLAIN, 12));
+        lblP.setFont(new Font(Font.SANS_SERIF, unread > 0 ? Font.BOLD : Font.PLAIN, 12));
         lblP.setForeground(unread > 0 ? TEXT_MAIN : MUTED);
         mid.add(lblN);
         mid.add(lblP);
@@ -1709,7 +1709,7 @@ public class ZaloDesktopApp {
         if (!isMe) {
             JLabel sender = new JLabel(sn);
             sender.setFont(new Font("Segoe UI", Font.BOLD, 11));
-            sender.setForeground(avColor(su));
+            sender.setForeground(avColor(su).darker());
             sender.setAlignmentX(Component.LEFT_ALIGNMENT);
             bubble.add(sender);
             bubble.add(Box.createVerticalStrut(3));
@@ -2390,7 +2390,9 @@ public class ZaloDesktopApp {
 
     private String initialsOf(String name) {
         if (name == null || name.isBlank()) return "?";
-        String[] parts = name.trim().split("\\s+");
+        String clean = name.replaceAll("[^\\p{L}\\p{N}\\s]", " ").trim();
+        if (clean.isEmpty()) return name.trim().substring(0, 1).toUpperCase();
+        String[] parts = clean.split("\\s+");
         if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
         return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
     }
