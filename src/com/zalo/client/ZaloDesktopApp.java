@@ -1990,10 +1990,19 @@ public class ZaloDesktopApp {
         playBtn.setFocusPainted(false);
         playBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         playBtn.setToolTipText("Phát tin nhắn thoại");
-        playBtn.addActionListener(e -> playOrOpenFile(url, m.getFileName(), fnLower.endsWith(".wav")));
-
         JLabel info = new JLabel("<html><b>Tin nhắn thoại</b><br><span style='color:#64748b;font-size:11px'>" + formatFileSize(m.getFileSize()) + " • " + escapeHtml(m.getFileName()) + "</span></html>");
         info.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        String baseHtml = info.getText();
+        Runnable runPlay = () -> playOrOpenFile(url, m.getFileName(), fnLower.endsWith(".wav"),
+                () -> SwingUtilities.invokeLater(() -> {
+                    info.setText("<html><b style='color:#0068FF'>Đang phát tin nhắn thoại...</b><br><span style='color:#64748b;font-size:11px'>" + formatFileSize(m.getFileSize()) + "</span></html>");
+                    playBtn.setIcon(new VectorIcon("stop", 22, ZALO_BLUE));
+                }),
+                () -> SwingUtilities.invokeLater(() -> {
+                    info.setText(baseHtml);
+                    playBtn.setIcon(new VectorIcon("play", 28, Color.WHITE));
+                }));
+        playBtn.addActionListener(e -> runPlay.run());
 
         JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 4));
         btns.setOpaque(false);
@@ -2016,7 +2025,7 @@ public class ZaloDesktopApp {
         card.add(btns, BorderLayout.EAST);
         card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         card.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) { playOrOpenFile(url, m.getFileName(), fnLower.endsWith(".wav")); }
+            @Override public void mouseClicked(MouseEvent e) { runPlay.run(); }
         });
         return card;
     }
@@ -2222,7 +2231,12 @@ public class ZaloDesktopApp {
     }
 
     private void playOrOpenFile(String url, String fileName, boolean playWav) {
+        playOrOpenFile(url, fileName, playWav, null, null);
+    }
+
+    private void playOrOpenFile(String url, String fileName, boolean playWav, Runnable onStart, Runnable onDone) {
         ioExec.submit(() -> {
+            if (onStart != null) onStart.run();
             try {
                 byte[] data = downloadBytes(url);
                 if (data == null || data.length == 0) throw new IOException("Tệp rỗng hoặc không tải được");
@@ -2258,6 +2272,8 @@ public class ZaloDesktopApp {
                 }
             } catch (Exception ex) {
                 SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainFrame, "Không mở được tệp: " + ex.getMessage()));
+            } finally {
+                if (onDone != null) onDone.run();
             }
         });
     }
