@@ -92,6 +92,7 @@ public class ZaloDesktopApp {
     private JButton tabAll, tabGroup, tabUnread;
     private javax.swing.Timer pollTimer, typingClearTimer;
     private long lastTypingSentMs = 0;
+    private int lastBadgeUnread = -1;
 
     private volatile boolean recording = false;
     private TargetDataLine micLine;
@@ -116,6 +117,7 @@ public class ZaloDesktopApp {
     // ==================== 1. ĐĂNG NHẬP / ĐĂNG KÝ (2 TAB GIỐNG WEB) ====================
     private void showLoginWindow() {
         JFrame loginFrame = new JFrame("Zalo — Đăng nhập");
+        loginFrame.setIconImages(createZaloIcons(0));
         loginFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         loginFrame.setSize(440, 520);
         loginFrame.setLocationRelativeTo(null);
@@ -346,6 +348,7 @@ public class ZaloDesktopApp {
     // ==================== 2. GIAO DIỆN ZALO PC 3.5-PANE ====================
     private void showMainWindow() {
         mainFrame = new JFrame("Zalo — " + myName + " (@" + me + ")");
+        mainFrame.setIconImages(createZaloIcons(0));
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mainFrame.setSize(1220, 760);
         mainFrame.setMinimumSize(new Dimension(920, 600));
@@ -1312,6 +1315,9 @@ public class ZaloDesktopApp {
         convListPanel.add(Box.createVerticalGlue());
         convListPanel.revalidate();
         convListPanel.repaint();
+        int totalUnread = 0;
+        for (int v : unreadMap.values()) totalUnread += Math.max(0, v);
+        updateTaskbarBadge(totalUnread);
     }
 
     private void addConvItemIfMatch(String id, String name, boolean isGrp, boolean online, String defSub, String q) {
@@ -1940,6 +1946,73 @@ public class ZaloDesktopApp {
         if (diffSec < 60) return "Vừa mới truy cập";
         if (diffSec < 3600) return "Hoạt động " + (diffSec / 60) + " phút trước";
         return "Hoạt động " + (diffSec / 3600) + " giờ trước";
+    }
+
+    private void updateTaskbarBadge(int totalUnread) {
+        if (mainFrame == null || totalUnread == lastBadgeUnread) return;
+        lastBadgeUnread = totalUnread;
+        mainFrame.setIconImages(createZaloIcons(totalUnread));
+    }
+
+    private List<Image> createZaloIcons(int unread) {
+        List<Image> imgs = new ArrayList<>();
+        for (int sz : new int[]{16, 32, 64, 128}) {
+            imgs.add(drawZaloIcon(sz, unread));
+        }
+        return imgs;
+    }
+
+    private BufferedImage drawZaloIcon(int sz, int unread) {
+        BufferedImage img = new BufferedImage(sz, sz, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = img.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        // Nền xanh Zalo bo tròn
+        int pad = Math.max(1, sz / 16);
+        int arc = Math.max(4, sz / 4);
+        g2.setColor(ZALO_BLUE);
+        g2.fillRoundRect(pad, pad, sz - pad * 2, sz - pad * 2, arc, arc);
+
+        // Bong bóng chat trắng + đuôi góc dưới trái
+        int bx = Math.round(sz * 0.14f);
+        int by = Math.round(sz * 0.16f);
+        int bw = Math.round(sz * 0.72f);
+        int bh = Math.round(sz * 0.64f);
+        g2.setColor(Color.WHITE);
+        g2.fillOval(bx, by, bw, bh);
+        int[] tx = {bx + Math.round(bw * 0.12f), bx - Math.round(sz * 0.03f), bx + Math.round(bw * 0.34f)};
+        int[] ty = {by + Math.round(bh * 0.72f), by + bh + Math.round(sz * 0.03f), by + Math.round(bh * 0.90f)};
+        g2.fillPolygon(tx, ty, 3);
+
+        // Chữ "Zalo" xanh ở giữa
+        if (sz >= 24) {
+            g2.setColor(ZALO_BLUE);
+            Font f = new Font("Segoe UI", Font.BOLD, Math.max(8, Math.round(sz * 0.25f)));
+            g2.setFont(f);
+            FontMetrics fm = g2.getFontMetrics();
+            String txt = "Zalo";
+            int txPos = bx + (bw - fm.stringWidth(txt)) / 2;
+            int tyPos = by + (bh - fm.getHeight()) / 2 + fm.getAscent();
+            g2.drawString(txt, txPos, tyPos);
+        }
+
+        // Badge đỏ số tin chưa đọc (1..5+) ở góc trên phải
+        if (unread > 0 && sz >= 24) {
+            int r = Math.round(sz * 0.40f);
+            int rx = sz - r;
+            int ry = 0;
+            g2.setColor(new Color(0xEF4444));
+            g2.fillOval(rx, ry, r, r);
+            String btxt = unread > 5 ? "5+" : String.valueOf(unread);
+            g2.setColor(Color.WHITE);
+            Font bf = new Font("Segoe UI", Font.BOLD, Math.max(8, Math.round(r * 0.56f)));
+            g2.setFont(bf);
+            FontMetrics bfm = g2.getFontMetrics();
+            g2.drawString(btxt, rx + (r - bfm.stringWidth(btxt)) / 2, ry + (r - bfm.getHeight()) / 2 + bfm.getAscent());
+        }
+        g2.dispose();
+        return img;
     }
 
     private String escapeHtml(String s) {
