@@ -1682,7 +1682,9 @@ public class ZaloDesktopApp {
         row.add(mid, BorderLayout.CENTER);
         row.add(right, BorderLayout.EAST);
         row.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) { selectConv(id, name, isGrp); }
+            @Override public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) selectConv(id, name, isGrp);
+            }
         });
         convListPanel.add(row);
     }
